@@ -790,7 +790,10 @@
   <div class="panel" id="portfolio-table-panel" style="display:none">
     <div class="panel-header">
       <span class="panel-title">Holdings</span>
-      <button class="btn btn-sm" style="background:var(--red);color:white;border:none;border-radius:2px;font-family:monospace;cursor:pointer;font-size:9px;padding:4px 10px" onclick="clearPortfolio()">✕ Clear</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" style="background:var(--forest);color:white;border:none;border-radius:2px;font-family:monospace;cursor:pointer;font-size:9px;padding:4px 10px" onclick="refreshPortfolioPrices()">📡 Refresh Prices</button>
+        <button class="btn btn-sm" style="background:var(--red);color:white;border:none;border-radius:2px;font-family:monospace;cursor:pointer;font-size:9px;padding:4px 10px" onclick="clearPortfolio()">✕ Clear</button>
+      </div>
     </div>
     <div style="overflow-x:auto">
       <table class="portfolio-table" id="portfolio-table">
@@ -829,10 +832,13 @@
 
         <div style="height:1px;background:var(--border);margin:20px 0"></div>
 
-        <label style="display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco);margin-bottom:5px">Financial Data API (Optional)</label>
-        <input type="password" class="form-input" id="fmp-key-input" placeholder="FMP or Alpha Vantage key">
-        <div class="settings-desc">For real-time prices, fundamentals, and live screener data. Free tier available at <strong>financialmodelingprep.com</strong> or <strong>alphavantage.co</strong>. Without this, demo data is used.</div>
-        <button class="btn btn-dark btn-full" onclick="saveFmpKey()" style="margin-top:14px">Save Financial Key</button>
+        <label style="display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco);margin-bottom:5px">Alpha Vantage API Key</label>
+        <div class="key-input-wrap">
+          <input type="password" class="form-input" id="fmp-key-input" placeholder="e.g. ABCDEF123456">
+          <button class="key-toggle" onclick="toggleKeyVis('fmp-key-input',this)">Show</button>
+        </div>
+        <div class="settings-desc">Enables <strong>live prices, real P/E, ROE, D/E, margins</strong> and accurate Buffett Score calculation. Free at <strong>alphavantage.co/support/#api-key</strong> — just enter your email, instant key. Free tier: 25 req/day.</div>
+        <button class="btn btn-dark btn-full" onclick="saveFmpKey()" style="margin-top:14px">Save Alpha Vantage Key</button>
       </div>
     </div>
     <div class="panel">
@@ -947,14 +953,15 @@ git push</pre>
 /* ══════════════════════════════════ STATE ═══════════════════════════════ */
 let portfolio = JSON.parse(localStorage.getItem('ob_portfolio') || '[]');
 let apiKey = localStorage.getItem('ob_api_key') || '';
-let fmpKey = localStorage.getItem('ob_fmp_key') || '';
+let fmpKey = localStorage.getItem('ob_fmp_key') || '';  // Alpha Vantage key
 let currentPicks = [];
+let avCallCount = 0; // track daily AV usage
 
 /* ══════════════════════════════════ INIT ════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('screen-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   if(apiKey) { document.getElementById('api-key-input').value = apiKey; updateApiDot(); }
-  if(fmpKey) document.getElementById('fmp-key-input').value = fmpKey;
+  if(fmpKey) { document.getElementById('fmp-key-input').value = fmpKey; updateAvDot(); }
   renderPortfolio();
 });
 
@@ -971,28 +978,210 @@ function saveApiKey() {
   apiKey = document.getElementById('api-key-input').value.trim();
   localStorage.setItem('ob_api_key', apiKey);
   updateApiDot();
-  showToast('API key saved!');
+  showToast('Anthropic API key saved!');
 }
 function saveFmpKey() {
   fmpKey = document.getElementById('fmp-key-input').value.trim();
   localStorage.setItem('ob_fmp_key', fmpKey);
-  showToast('Financial data key saved!');
+  updateAvDot();
+  showToast('Alpha Vantage key saved! Live data enabled.');
 }
 function updateApiDot() {
   const dot = document.getElementById('api-dot');
   const status = document.getElementById('api-status');
   if(apiKey && apiKey.length > 10) {
     dot.classList.add('connected');
-    status.textContent = 'Connected';
+    status.textContent = 'AI Connected';
   } else {
     dot.classList.remove('connected');
     status.textContent = 'No API Key';
+  }
+}
+function updateAvDot() {
+  // Show live data indicator in status bar when AV key present
+  const existing = document.getElementById('av-indicator');
+  if(existing) existing.remove();
+  if(fmpKey && fmpKey.length > 4) {
+    const strip = document.querySelector('.status-strip');
+    if(strip) {
+      const el = document.createElement('span');
+      el.id = 'av-indicator';
+      el.innerHTML = 'Data: <b style="color:var(--forest)">📡 LIVE</b>';
+      strip.appendChild(el);
+    }
   }
 }
 function toggleKeyVis(id, btn) {
   const inp = document.getElementById(id);
   if(inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
   else { inp.type = 'password'; btn.textContent = 'Show'; }
+}
+
+/* ══════════════════════════════════ ALPHA VANTAGE ═══════════════════════
+   Fetches real fundamentals + quote for a ticker.
+   Returns null if no AV key or call fails.
+   AV free tier: 25 req/day, 500/month — we batch carefully.
+═══════════════════════════════════════════════════════════════════════════ */
+async function avFetch(fn, params) {
+  if(!fmpKey) return null;
+  avCallCount++;
+  const url = `https://www.alphavantage.co/query?function=${fn}&${params}&apikey=${fmpKey}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    // AV returns {"Note":"..."} or {"Information":"..."} when rate limited
+    if(data.Note || data.Information) {
+      showToast('⚠️ Alpha Vantage rate limit hit — using AI estimates for remaining picks.');
+      return null;
+    }
+    return data;
+  } catch(e) { return null; }
+}
+
+// Pull quote (price, change) for a ticker
+async function avGetQuote(ticker) {
+  const data = await avFetch('GLOBAL_QUOTE', `symbol=${ticker}`);
+  if(!data || !data['Global Quote']) return null;
+  const q = data['Global Quote'];
+  return {
+    price: parseFloat(q['05. price']) || 0,
+    change: parseFloat(q['09. change']) || 0,
+    changePct: parseFloat((q['10. change percent']||'0').replace('%','')) || 0,
+  };
+}
+
+// Pull company overview (P/E, P/B, ROE, D/E, margins, dividend)
+async function avGetOverview(ticker) {
+  const data = await avFetch('OVERVIEW', `symbol=${ticker}`);
+  if(!data || !data.Symbol) return null;
+  return {
+    name: data.Name || ticker,
+    sector: data.Sector || '',
+    pe: parseFloat(data.PERatio) || null,
+    pb: parseFloat(data.PriceToBookRatio) || null,
+    roe: parseFloat(data.ReturnOnEquityTTM) ? parseFloat(data.ReturnOnEquityTTM)*100 : null,
+    de: parseFloat(data.DebtToEquityRatioTTM) || null,
+    divYield: parseFloat(data.DividendYield) ? parseFloat(data.DividendYield)*100 : null,
+    netMargin: parseFloat(data.ProfitMargin) ? parseFloat(data.ProfitMargin)*100 : null,
+    eps: parseFloat(data.EPS) || null,
+    marketCap: parseInt(data.MarketCapitalization) || null,
+    beta: parseFloat(data.Beta) || null,
+    fiftyTwoHigh: parseFloat(data['52WeekHigh']) || null,
+    fiftyTwoLow: parseFloat(data['52WeekLow']) || null,
+    description: data.Description || '',
+    evToEbitda: parseFloat(data.EVToEBITDA) || null,
+    revenueGrowthYoy: parseFloat(data.QuarterlyRevenueGrowthYOY) ? parseFloat(data.QuarterlyRevenueGrowthYOY)*100 : null,
+    earningsGrowthYoy: parseFloat(data.QuarterlyEarningsGrowthYOY) ? parseFloat(data.QuarterlyEarningsGrowthYOY)*100 : null,
+    analystTarget: parseFloat(data.AnalystTargetPrice) || null,
+  };
+}
+
+// Pull income statement for FCF & margin history
+async function avGetIncome(ticker) {
+  const data = await avFetch('INCOME_STATEMENT', `symbol=${ticker}`);
+  if(!data || !data.annualReports) return null;
+  const reports = data.annualReports.slice(0,3);
+  return reports.map(r => ({
+    year: r.fiscalDateEnding?.slice(0,4),
+    revenue: parseInt(r.totalRevenue) || 0,
+    netIncome: parseInt(r.netIncome) || 0,
+    grossProfit: parseInt(r.grossProfit) || 0,
+    ebitda: parseInt(r.ebitda) || 0,
+  }));
+}
+
+// Compute real Buffett score from live data
+function computeBuffettScore(overview, incomeHistory) {
+  if(!overview) return null;
+  let score = 0;
+  let factors = {};
+
+  // 1. P/E (max 15 pts) — Buffett wants P/E < 20, loves < 15
+  if(overview.pe !== null) {
+    if(overview.pe < 10) { score += 15; factors.pe = 15; }
+    else if(overview.pe < 15) { score += 12; factors.pe = 12; }
+    else if(overview.pe < 20) { score += 8; factors.pe = 8; }
+    else if(overview.pe < 25) { score += 3; factors.pe = 3; }
+    else { factors.pe = 0; }
+  }
+
+  // 2. P/B (max 12 pts) — loves P/B < 1.5
+  if(overview.pb !== null) {
+    if(overview.pb < 1.0) { score += 12; factors.pb = 12; }
+    else if(overview.pb < 1.5) { score += 10; factors.pb = 10; }
+    else if(overview.pb < 2.5) { score += 5; factors.pb = 5; }
+    else if(overview.pb < 4) { score += 2; factors.pb = 2; }
+    else { factors.pb = 0; }
+  }
+
+  // 3. ROE (max 18 pts) — must be 15%+, loves 20%+
+  if(overview.roe !== null) {
+    if(overview.roe >= 25) { score += 18; factors.roe = 18; }
+    else if(overview.roe >= 20) { score += 15; factors.roe = 15; }
+    else if(overview.roe >= 15) { score += 10; factors.roe = 10; }
+    else if(overview.roe >= 10) { score += 4; factors.roe = 4; }
+    else { factors.roe = 0; }
+  }
+
+  // 4. D/E (max 15 pts) — hates debt
+  if(overview.de !== null) {
+    if(overview.de < 0.3) { score += 15; factors.de = 15; }
+    else if(overview.de < 0.7) { score += 12; factors.de = 12; }
+    else if(overview.de < 1.0) { score += 7; factors.de = 7; }
+    else if(overview.de < 1.5) { score += 3; factors.de = 3; }
+    else { factors.de = 0; }
+  }
+
+  // 5. Net Margin (max 15 pts) — pricing power
+  if(overview.netMargin !== null) {
+    if(overview.netMargin >= 20) { score += 15; factors.margin = 15; }
+    else if(overview.netMargin >= 15) { score += 12; factors.margin = 12; }
+    else if(overview.netMargin >= 10) { score += 8; factors.margin = 8; }
+    else if(overview.netMargin >= 5) { score += 4; factors.margin = 4; }
+    else { factors.margin = 0; }
+  }
+
+  // 6. Earnings Growth YoY (max 10 pts)
+  if(overview.earningsGrowthYoy !== null) {
+    if(overview.earningsGrowthYoy >= 15) { score += 10; factors.growth = 10; }
+    else if(overview.earningsGrowthYoy >= 8) { score += 7; factors.growth = 7; }
+    else if(overview.earningsGrowthYoy >= 0) { score += 3; factors.growth = 3; }
+    else { factors.growth = 0; }
+  }
+
+  // 7. Dividend (max 8 pts) — likes steady dividends
+  if(overview.divYield !== null) {
+    if(overview.divYield >= 3) { score += 8; factors.div = 8; }
+    else if(overview.divYield >= 1.5) { score += 6; factors.div = 6; }
+    else if(overview.divYield > 0) { score += 3; factors.div = 3; }
+    else { factors.div = 0; }
+  }
+
+  // 8. EV/EBITDA (max 7 pts) — overall value
+  if(overview.evToEbitda !== null) {
+    if(overview.evToEbitda < 8) { score += 7; factors.ev = 7; }
+    else if(overview.evToEbitda < 12) { score += 5; factors.ev = 5; }
+    else if(overview.evToEbitda < 16) { score += 2; factors.ev = 2; }
+    else { factors.ev = 0; }
+  }
+
+  return { score: Math.min(100, Math.round(score)), factors };
+}
+
+// Convert sub-scores to bar percentages (0-100)
+function scoreToBar(overview, incomeHistory) {
+  const scored = computeBuffettScore(overview, incomeHistory);
+  if(!scored) return null;
+  const f = scored.factors;
+
+  return {
+    moatRating:     Math.min(100, Math.round(((f.margin||0)/15)*100)),
+    earningsGrowth: Math.min(100, Math.round(((f.growth||0)/10)*100)),
+    freeCashFlow:   Math.min(100, overview?.netMargin > 0 ? Math.min(100, overview.netMargin * 3.5) : 30),
+    marginOfSafety: overview?.pe ? Math.min(100, Math.round(Math.max(0, (25 - overview.pe) / 25 * 100 + 20))) : 50,
+    debtQuality:    Math.min(100, Math.round(((f.de||0)/15)*100)),
+    managementScore:Math.min(100, Math.round(((f.roe||0)/18)*100)),
+  };
 }
 
 /* ══════════════════════════════════ SCREENER ════════════════════════════ */
@@ -1003,7 +1192,7 @@ async function runScreener() {
   const statusEl = document.getElementById('screen-status');
   statusEl.className = 'tag tag-yellow';
   statusEl.textContent = 'SCANNING...';
-  body.innerHTML = '<div class="loading-msg"><div class="spinner"></div> Applying Buffett criteria across market universe...</div>';
+  avCallCount = 0;
 
   const filters = {
     sector: document.getElementById('filter-sector').value,
@@ -1016,92 +1205,168 @@ async function runScreener() {
     marginMin: document.getElementById('margin-min').value,
   };
 
-  const prompt = `You are Warren Buffett's AI investment analyst, applying his classic value investing methodology.
+  const hasLiveData = fmpKey && fmpKey.length > 4;
 
-Using these screening criteria:
+  // ── STEP 1: Ask Claude for 3 candidate tickers ──
+  body.innerHTML = '<div class="loading-msg"><div class="spinner"></div> Step 1/3 — Claude identifying hidden gem candidates...</div>';
+
+  const tickerPrompt = `You are Warren Buffett's AI analyst. Identify EXACTLY 3 undervalued "hidden gem" stock tickers that best fit these criteria as of March 2026:
 - Sector: ${filters.sector || 'Any'}
 - Market Cap: ${filters.mcap || 'Any'}
-- Max P/E: ${filters.peMax}x
-- Max P/B: ${filters.pbMax}x
-- Min ROE: ${filters.roeMin}%
-- Max Debt/Equity: ${filters.deMax}x
-- Min Dividend Yield: ${filters.divMin}%
-- Min Net Margin: ${filters.marginMin}%
+- Max P/E: ${filters.peMax}x, Max P/B: ${filters.pbMax}x, Min ROE: ${filters.roeMin}%, Max D/E: ${filters.deMax}x, Min Div Yield: ${filters.divMin}%, Min Net Margin: ${filters.marginMin}%
 
-Find EXACTLY 3 undervalued "hidden gem" stocks that meet Buffett's principles as of today's market (March 2026). These should be lesser-known, undervalued companies — not mega-caps everyone knows.
+Pick lesser-known, genuinely undervalued companies — not FAANG or mega-caps. Return ONLY a JSON array of 3 tickers: ["TICK1","TICK2","TICK3"]`;
 
-For each stock, provide a JSON array with this exact structure:
-[
-  {
-    "ticker": "TICKER",
-    "name": "Full Company Name",
-    "price": 00.00,
-    "change": +/-0.00,
-    "changePct": +/-0.0,
-    "buffettScore": 0-100,
-    "pe": 0.0,
-    "pb": 0.0,
-    "roe": 0.0,
-    "de": 0.0,
-    "divYield": 0.0,
-    "netMargin": 0.0,
-    "moatRating": 0-100,
-    "earningsGrowth": 0-100,
-    "freeCashFlow": 0-100,
-    "marginOfSafety": 0-100,
-    "debtQuality": 0-100,
-    "managementScore": 0-100,
-    "thesis": "2-3 sentence investment thesis explaining why Buffett would love this stock."
+  let tickers = [];
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 100, messages: [{ role: 'user', content: tickerPrompt }] })
+    });
+    const data = await res.json();
+    const text = (data.content?.[0]?.text || '').replace(/```json|```/g,'').trim();
+    tickers = JSON.parse(text);
+  } catch(e) {
+    body.innerHTML = `<div class="empty-state"><div class="big">✕</div><p>Failed to get ticker candidates: ${e.message}</p></div>`;
+    statusEl.className = 'tag tag-red'; statusEl.textContent = 'ERROR';
+    return;
   }
-]
 
-Return ONLY valid JSON. No preamble, no markdown, no explanation.`;
+  // ── STEP 2: Fetch live fundamentals from Alpha Vantage ──
+  let liveData = {};
+  if(hasLiveData) {
+    body.innerHTML = `<div class="loading-msg"><div class="spinner"></div> Step 2/3 — Fetching live fundamentals from Alpha Vantage for ${tickers.join(', ')}...</div>`;
+    for(const ticker of tickers) {
+      const [overview, quote] = await Promise.all([
+        avGetOverview(ticker),
+        avGetQuote(ticker),
+      ]);
+      // Small delay to respect AV rate limits (5 req/min on free tier)
+      await new Promise(r => setTimeout(r, 1200));
+      liveData[ticker] = { overview, quote };
+    }
+  }
+
+  // ── STEP 3: Ask Claude to score & analyze with real data ──
+  body.innerHTML = '<div class="loading-msg"><div class="spinner"></div> Step 3/3 — Scoring against Buffett criteria and writing theses...</div>';
+
+  const dataContext = hasLiveData
+    ? `\n\nHere is LIVE market data from Alpha Vantage for each ticker. Use these EXACT numbers for pe, pb, roe, de, divYield, netMargin, price, change, changePct fields:\n${tickers.map(t => {
+        const d = liveData[t];
+        if(!d.overview && !d.quote) return `${t}: No live data available`;
+        const o = d.overview || {};
+        const q = d.quote || {};
+        return `${t} (${o.name||t}): price=$${q.price||'N/A'}, change=${q.change||0} (${q.changePct||0}%), P/E=${o.pe||'N/A'}, P/B=${o.pb||'N/A'}, ROE=${o.roe?.toFixed(1)||'N/A'}%, D/E=${o.de||'N/A'}, DivYield=${o.divYield?.toFixed(2)||'0'}%, NetMargin=${o.netMargin?.toFixed(1)||'N/A'}%, EarningsGrowthYoY=${o.earningsGrowthYoy?.toFixed(1)||'N/A'}%, EV/EBITDA=${o.evToEbitda||'N/A'}, 52wk: $${o.fiftyTwoLow||'N/A'}–$${o.fiftyTwoHigh||'N/A'}, AnalystTarget=$${o.analystTarget||'N/A'}`;
+      }).join('\n')}`
+    : '';
+
+  const scorePrompt = `You are Warren Buffett's AI analyst. For these 3 tickers: ${tickers.join(', ')}
+${dataContext}
+
+${hasLiveData ? 'Use the EXACT live data values provided above for the numeric fields. Do NOT invent numbers — use what is given.' : 'Use your best knowledge of these companies as of early 2026 for all numbers.'}
+
+For each stock compute a buffettScore (0-100) based on these weighted criteria:
+- P/E < 15: excellent, < 20: good, > 25: poor (15 pts)
+- P/B < 1.5: excellent, < 2.5: ok, > 4: poor (12 pts)  
+- ROE > 20%: excellent, > 15%: good, < 10%: poor (18 pts)
+- D/E < 0.5: excellent, < 1: ok, > 1.5: poor (15 pts)
+- Net Margin > 15%: excellent, > 10%: good, < 5%: poor (15 pts)
+- Earnings Growth > 10%: excellent (10 pts)
+- Dividend Yield > 2%: good (8 pts)
+- EV/EBITDA < 10: excellent (7 pts)
+
+Also score these qualitative metrics 0-100:
+- moatRating: strength of competitive moat (brand, IP, switching costs, network effects)
+- earningsGrowth: consistency of 5-10yr earnings growth trend
+- freeCashFlow: FCF generation quality and consistency
+- marginOfSafety: how far below intrinsic value the stock trades
+- debtQuality: quality and manageability of debt load
+- managementScore: capital allocation track record and owner-operator alignment
+
+Return a JSON array:
+[{
+  "ticker": "TICK",
+  "name": "Full Name",
+  "price": 0.00,
+  "change": 0.00,
+  "changePct": 0.0,
+  "buffettScore": 0,
+  "pe": 0.0, "pb": 0.0, "roe": 0.0, "de": 0.0, "divYield": 0.0, "netMargin": 0.0,
+  "moatRating": 0, "earningsGrowth": 0, "freeCashFlow": 0, "marginOfSafety": 0, "debtQuality": 0, "managementScore": 0,
+  "dataSource": "live" or "estimated",
+  "thesis": "2-3 sentence Buffett-style thesis.",
+  "intrinsicValue": 0.00,
+  "upside": 0.0
+}]
+Return ONLY valid JSON.`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2500, messages: [{ role: 'user', content: scorePrompt }] })
     });
 
     const data = await res.json();
-    const text = data.content?.[0]?.text || '';
-    const clean = text.replace(/```json|```/g,'').trim();
-    const picks = JSON.parse(clean);
-    currentPicks = picks;
+    const text = (data.content?.[0]?.text || '').replace(/```json|```/g,'').trim();
+    let picks = JSON.parse(text);
 
-    renderPicks(picks);
+    // ── Override scores with computed Buffett scores if live data available ──
+    if(hasLiveData) {
+      picks = picks.map(p => {
+        const live = liveData[p.ticker];
+        if(live?.overview) {
+          const scored = computeBuffettScore(live.overview);
+          const bars = scoreToBar(live.overview);
+          if(scored) p.buffettScore = scored.score;
+          if(bars) Object.assign(p, bars);
+          // Use live price if available
+          if(live.quote?.price) {
+            p.price = live.quote.price;
+            p.change = live.quote.change;
+            p.changePct = live.quote.changePct;
+          }
+          p.dataSource = 'live';
+        }
+        return p;
+      });
+    }
+
+    currentPicks = picks;
+    renderPicks(picks, hasLiveData);
     statusEl.className = 'tag tag-green';
-    statusEl.textContent = 'COMPLETE';
+    statusEl.textContent = hasLiveData ? '✓ LIVE DATA' : '✓ COMPLETE';
     document.getElementById('pick-count').textContent = picks.length;
     document.getElementById('avg-score').textContent = Math.round(picks.reduce((a,p)=>a+p.buffettScore,0)/picks.length);
+    if(hasLiveData) showToast(`📡 Live data used — ${avCallCount} Alpha Vantage calls made`);
 
   } catch(e) {
-    body.innerHTML = `<div class="empty-state"><div class="big">✕</div><p>Error: ${e.message}. Check your API key in Settings and try again.</p></div>`;
-    statusEl.className = 'tag tag-red';
-    statusEl.textContent = 'ERROR';
+    body.innerHTML = `<div class="empty-state"><div class="big">✕</div><p>Error: ${e.message}. Check your API key in Settings.</p></div>`;
+    statusEl.className = 'tag tag-red'; statusEl.textContent = 'ERROR';
   }
 }
 
-function renderPicks(picks) {
+function renderPicks(picks, hasLiveData) {
   const body = document.getElementById('picks-body');
   body.innerHTML = '';
 
   picks.forEach((p, i) => {
     const sign = p.change >= 0 ? '+' : '';
     const changeClass = p.change >= 0 ? 'pos' : 'neg';
+    const isLive = p.dataSource === 'live';
+    const upside = p.upside ? (p.upside > 0 ? `+${p.upside.toFixed(1)}%` : `${p.upside.toFixed(1)}%`) : null;
+    const upsideClass = p.upside >= 0 ? 'p-gain' : 'p-loss';
+
+    const fmt = (v, suffix='') => (v !== null && v !== undefined && !isNaN(v)) ? `${parseFloat(v).toFixed(1)}${suffix}` : '—';
 
     const bars = [
-      { name: 'Economic Moat', val: p.moatRating },
-      { name: 'Earnings Growth', val: p.earningsGrowth },
-      { name: 'Free Cash Flow', val: p.freeCashFlow },
-      { name: 'Margin of Safety', val: p.marginOfSafety },
-      { name: 'Debt Quality', val: p.debtQuality },
-      { name: 'Management Trust', val: p.managementScore },
+      { name: 'Economic Moat', val: p.moatRating || 0 },
+      { name: 'Earnings Growth', val: p.earningsGrowth || 0 },
+      { name: 'Free Cash Flow', val: p.freeCashFlow || 0 },
+      { name: 'Margin of Safety', val: p.marginOfSafety || 0 },
+      { name: 'Debt Quality', val: p.debtQuality || 0 },
+      { name: 'Management Trust', val: p.managementScore || 0 },
     ].map(b => `
       <div class="bar-row">
         <span class="bar-name">${b.name}</span>
@@ -1109,20 +1374,28 @@ function renderPicks(picks) {
         <span class="bar-score-txt">${b.val}</span>
       </div>`).join('');
 
+    const liveTag = isLive
+      ? `<span class="tag tag-green" style="font-size:8px;padding:1px 6px">📡 LIVE</span>`
+      : `<span class="tag tag-yellow" style="font-size:8px;padding:1px 6px">EST</span>`;
+
     body.innerHTML += `
       <div class="stock-card">
         <div class="stock-card-header" onclick="toggleCard(${i})">
           <div style="display:flex;align-items:center">
             <span class="pick-number-badge">${i+1}</span>
             <div>
-              <div class="stock-ticker">${p.ticker}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="stock-ticker">${p.ticker}</span>
+                ${liveTag}
+              </div>
               <div class="stock-name">${p.name}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:24px">
             <div style="text-align:right">
-              <div class="stock-price">$${p.price.toFixed(2)}</div>
-              <div class="stock-change ${changeClass}">${sign}${p.change.toFixed(2)} (${sign}${p.changePct.toFixed(1)}%)</div>
+              <div class="stock-price">$${(p.price||0).toFixed(2)}</div>
+              <div class="stock-change ${changeClass}">${sign}${(p.change||0).toFixed(2)} (${sign}${(p.changePct||0).toFixed(1)}%)</div>
+              ${upside ? `<div style="font-size:10px;color:var(--tobacco)">Upside: <span class="${upsideClass}">${upside}</span></div>` : ''}
             </div>
             <div class="stock-score">
               <span class="score-num">${p.buffettScore}</span>
@@ -1132,14 +1405,25 @@ function renderPicks(picks) {
         </div>
         <div class="stock-card-body" id="card-body-${i}">
           <div class="metrics-grid">
-            <div class="metric-box"><div class="metric-box-val">${p.pe}x</div><div class="metric-box-label">P/E Ratio</div></div>
-            <div class="metric-box"><div class="metric-box-val">${p.pb}x</div><div class="metric-box-label">P/B Ratio</div></div>
-            <div class="metric-box"><div class="metric-box-val">${p.roe}%</div><div class="metric-box-label">ROE</div></div>
-            <div class="metric-box"><div class="metric-box-val">${p.de}x</div><div class="metric-box-label">Debt/Equity</div></div>
-            <div class="metric-box"><div class="metric-box-val">${p.divYield}%</div><div class="metric-box-label">Div. Yield</div></div>
-            <div class="metric-box"><div class="metric-box-val">${p.netMargin}%</div><div class="metric-box-label">Net Margin</div></div>
+            <div class="metric-box"><div class="metric-box-val">${fmt(p.pe)}x</div><div class="metric-box-label">P/E Ratio</div></div>
+            <div class="metric-box"><div class="metric-box-val">${fmt(p.pb)}x</div><div class="metric-box-label">P/B Ratio</div></div>
+            <div class="metric-box"><div class="metric-box-val">${fmt(p.roe)}%</div><div class="metric-box-label">ROE</div></div>
+            <div class="metric-box"><div class="metric-box-val">${fmt(p.de)}x</div><div class="metric-box-label">Debt/Equity</div></div>
+            <div class="metric-box"><div class="metric-box-val">${fmt(p.divYield)}%</div><div class="metric-box-label">Div. Yield</div></div>
+            <div class="metric-box"><div class="metric-box-val">${fmt(p.netMargin)}%</div><div class="metric-box-label">Net Margin</div></div>
           </div>
-          <div class="section-divider">Buffett Score Breakdown</div>
+          ${p.intrinsicValue ? `
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <div class="metric-box" style="flex:1;background:rgba(45,74,34,0.06);border-color:var(--forest)">
+              <div class="metric-box-val" style="color:var(--forest)">$${parseFloat(p.intrinsicValue).toFixed(2)}</div>
+              <div class="metric-box-label">Intrinsic Value Est.</div>
+            </div>
+            ${upside ? `<div class="metric-box" style="flex:1;background:rgba(45,74,34,0.06);border-color:var(--forest)">
+              <div class="metric-box-val ${upsideClass}">${upside}</div>
+              <div class="metric-box-label">Upside to Intrinsic</div>
+            </div>` : ''}
+          </div>` : ''}
+          <div class="section-divider">Buffett Score Breakdown ${isLive ? '<span style="font-size:9px;color:var(--forest)">(computed from live data)</span>' : '<span style="font-size:9px;color:var(--tobacco)">(AI estimated)</span>'}</div>
           <div class="buffett-bars">${bars}</div>
           <div class="analysis-box"><em>Investment Thesis:</em> ${p.thesis}</div>
         </div>
@@ -1300,7 +1584,20 @@ function renderPortfolio() {
   document.getElementById('pf-sells').textContent = sells || '—';
 }
 
-function clearPortfolio() {
+async function refreshPortfolioPrices() {
+  if(!fmpKey || portfolio.length === 0) return;
+  showToast('📡 Refreshing live prices...');
+  for(let i = 0; i < portfolio.length; i++) {
+    const q = await avGetQuote(portfolio[i].ticker);
+    if(q?.price) portfolio[i].currentPrice = q.price;
+    await new Promise(r => setTimeout(r, 1200)); // AV rate limit
+  }
+  localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
+  renderPortfolio();
+  showToast('Prices updated!');
+}
+
+
   if(!confirm('Clear all portfolio positions?')) return;
   portfolio = [];
   localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
@@ -1314,87 +1611,114 @@ async function openReview(idx) {
 
   document.getElementById('modal-ticker').textContent = stock.ticker;
   document.getElementById('modal-name').textContent = stock.name;
-  document.getElementById('modal-body').innerHTML = '<div class="loading-msg"><div class="spinner"></div> Analyzing recent earnings, news, and Buffett fundamentals for ' + stock.ticker + '...</div>';
+  document.getElementById('modal-body').innerHTML = '<div class="loading-msg"><div class="spinner"></div> Fetching live data & analyzing ' + stock.ticker + '...</div>';
   document.getElementById('review-modal').classList.add('open');
 
-  const pl = ((stock.currentPrice - stock.avgCost) / stock.avgCost * 100).toFixed(1);
+  // ── Fetch live data if AV key available ──
+  let liveOverview = null, liveQuote = null;
+  if(fmpKey && fmpKey.length > 4) {
+    [liveOverview, liveQuote] = await Promise.all([avGetOverview(stock.ticker), avGetQuote(stock.ticker)]);
+    // Update live price in portfolio
+    if(liveQuote?.price) {
+      portfolio[idx].currentPrice = liveQuote.price;
+      localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
+    }
+  }
 
-  const prompt = `You are Warren Buffett's trusted analyst. A user holds ${stock.shares} shares of ${stock.ticker} (${stock.name}) with an average cost of $${stock.avgCost.toFixed(2)} per share. Current price is approximately $${stock.currentPrice.toFixed(2)} (${pl >= 0 ? '+' : ''}${pl}% unrealized).
+  const currentPrice = liveQuote?.price || stock.currentPrice;
+  const pl = stock.avgCost > 0 ? ((currentPrice - stock.avgCost) / stock.avgCost * 100).toFixed(1) : '0.0';
 
-Based on what you know about this company as of early 2026:
+  const liveContext = liveOverview ? `
+
+LIVE MARKET DATA from Alpha Vantage (use these exact numbers):
+- Current Price: $${liveQuote?.price || 'N/A'} (${liveQuote?.change >= 0 ? '+' : ''}${liveQuote?.change || 0} today)
+- P/E Ratio: ${liveOverview.pe || 'N/A'}
+- P/B Ratio: ${liveOverview.pb || 'N/A'}
+- ROE: ${liveOverview.roe?.toFixed(1) || 'N/A'}%
+- Debt/Equity: ${liveOverview.de || 'N/A'}
+- Net Margin: ${liveOverview.netMargin?.toFixed(1) || 'N/A'}%
+- Dividend Yield: ${liveOverview.divYield?.toFixed(2) || '0'}%
+- EV/EBITDA: ${liveOverview.evToEbitda || 'N/A'}
+- Earnings Growth YoY: ${liveOverview.earningsGrowthYoy?.toFixed(1) || 'N/A'}%
+- Revenue Growth YoY: ${liveOverview.revenueGrowthYoy?.toFixed(1) || 'N/A'}%
+- 52-Week Range: $${liveOverview.fiftyTwoLow || 'N/A'} – $${liveOverview.fiftyTwoHigh || 'N/A'}
+- Analyst Price Target: $${liveOverview.analystTarget || 'N/A'}
+- Sector: ${liveOverview.sector || 'N/A'}` : '';
+
+  const prompt = `You are Warren Buffett's trusted analyst. A user holds ${stock.shares} shares of ${stock.ticker} (${stock.name || stock.ticker}) with an average cost of $${stock.avgCost.toFixed(2)} per share. Current price: $${currentPrice.toFixed(2)} (${pl >= 0 ? '+' : ''}${pl}% unrealized).
+${liveContext}
+
+Based on ${liveOverview ? 'the LIVE data above plus' : ''} your knowledge of this company as of early 2026:
 1. Recent earnings performance and guidance
 2. Key news developments (M&A, product launches, macro headwinds)
-3. Buffett-style valuation (P/E, ROE, moat, FCF, debt)
-4. Competitive positioning
+3. Buffett-style valuation vs intrinsic value
+4. Competitive moat and positioning
 
 Provide a structured review as JSON:
 {
   "verdict": "BUY MORE" | "HOLD" | "SELL",
   "confidence": 0-100,
-  "targetPrice": 00.00,
-  "summary": "2-3 sentence overall take",
-  "earningsSection": "Summary of recent earnings call highlights and management guidance",
-  "newsSection": "Key recent news affecting the stock (catalysts or headwinds)",
-  "buffettSection": "Buffett-style fundamental analysis: moat, FCF, valuation vs intrinsic value",
-  "risks": "Top 2-3 risks to monitor",
-  "action": "Specific actionable advice for this holder"
+  "targetPrice": 0.00,
+  "intrinsicValue": 0.00,
+  "summary": "2-3 sentence overall take referencing specific metrics",
+  "earningsSection": "Recent earnings highlights, EPS beats/misses, guidance raised or lowered",
+  "newsSection": "Key recent news — catalysts or headwinds affecting the stock",
+  "buffettSection": "Buffett-style analysis: moat strength, FCF quality, valuation vs intrinsic value, ROE consistency",
+  "risks": "Top 2-3 specific risks to monitor",
+  "action": "Specific, concrete action advice for this position holder"
 }
-
 Return ONLY valid JSON.`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
 
     const data = await res.json();
-    const text = data.content?.[0]?.text || '';
-    const clean = text.replace(/```json|```/g,'').trim();
-    const review = JSON.parse(clean);
+    const text = (data.content?.[0]?.text || '').replace(/```json|```/g,'').trim();
+    const review = JSON.parse(text);
 
-    // Save verdict
     portfolio[idx].verdict = review.verdict;
     localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
     renderPortfolio();
 
     const verdictClass = review.verdict === 'BUY MORE' ? 'verdict-buy' : review.verdict === 'SELL' ? 'verdict-sell' : 'verdict-hold';
     const verdictIcon = review.verdict === 'BUY MORE' ? '▲' : review.verdict === 'SELL' ? '▼' : '●';
+    const plNum = parseFloat(pl);
+
+    // Buffett score from live data if available
+    let bScore = null;
+    if(liveOverview) { const sc = computeBuffettScore(liveOverview); if(sc) bScore = sc.score; }
 
     document.getElementById('modal-body').innerHTML = `
-      <div class="verdict-badge ${verdictClass}">${verdictIcon} ${review.verdict} &nbsp;·&nbsp; ${review.confidence}% Confidence</div>
-
-      <div style="display:flex;gap:12px;margin-bottom:20px">
-        <div class="metric-box" style="flex:1;text-align:center"><div class="metric-box-val">$${review.targetPrice?.toFixed(2) || '—'}</div><div class="metric-box-label">Target Price</div></div>
-        <div class="metric-box" style="flex:1;text-align:center"><div class="metric-box-val">$${stock.currentPrice.toFixed(2)}</div><div class="metric-box-label">Current Price</div></div>
-        <div class="metric-box" style="flex:1;text-align:center"><div class="metric-box-val ${pl >= 0 ? 'p-gain' : 'p-loss'}">${pl >= 0 ? '+' : ''}${pl}%</div><div class="metric-box-label">Your Return</div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+        <div class="verdict-badge ${verdictClass}" style="margin-bottom:0">${verdictIcon} ${review.verdict} &nbsp;·&nbsp; ${review.confidence}% Confidence</div>
+        ${liveOverview ? '<span class="tag tag-green">📡 Live Data</span>' : '<span class="tag tag-yellow">AI Estimated</span>'}
+        ${bScore !== null ? `<span style="font-size:11px;color:var(--tobacco)">Buffett Score: <strong>${bScore}/100</strong></span>` : ''}
       </div>
 
-      <div class="review-section">
-        <div class="review-section-title">Summary</div>
-        <div class="review-text">${review.summary}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+        <div class="metric-box"><div class="metric-box-val">$${currentPrice.toFixed(2)}</div><div class="metric-box-label">Current Price</div></div>
+        <div class="metric-box"><div class="metric-box-val" style="color:var(--forest)">$${review.targetPrice?.toFixed(2)||'—'}</div><div class="metric-box-label">AI Target</div></div>
+        <div class="metric-box"><div class="metric-box-val" style="color:var(--gold)">$${review.intrinsicValue?.toFixed(2)||'—'}</div><div class="metric-box-label">Intrinsic Value</div></div>
+        <div class="metric-box"><div class="metric-box-val ${plNum >= 0 ? 'p-gain' : 'p-loss'}">${plNum >= 0 ? '+' : ''}${pl}%</div><div class="metric-box-label">Your Return</div></div>
       </div>
-      <div class="review-section">
-        <div class="review-section-title">📊 Earnings & Guidance</div>
-        <div class="review-text">${review.earningsSection}</div>
-      </div>
-      <div class="review-section">
-        <div class="review-section-title">📰 Recent News & Catalysts</div>
-        <div class="review-text">${review.newsSection}</div>
-      </div>
-      <div class="review-section">
-        <div class="review-section-title">🏦 Buffett Fundamentals</div>
-        <div class="review-text">${review.buffettSection}</div>
-      </div>
-      <div class="review-section">
-        <div class="review-section-title">⚠️ Key Risks</div>
-        <div class="review-text">${review.risks}</div>
-      </div>
+
+      ${liveOverview ? `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;padding:12px;background:var(--cream);border:1px solid var(--border);border-radius:4px">
+        <div style="text-align:center"><div style="font-size:13px;font-weight:600">${liveOverview.pe?.toFixed(1)||'—'}x</div><div style="font-size:9px;color:var(--tobacco);text-transform:uppercase;letter-spacing:.1em">P/E</div></div>
+        <div style="text-align:center"><div style="font-size:13px;font-weight:600">${liveOverview.roe?.toFixed(1)||'—'}%</div><div style="font-size:9px;color:var(--tobacco);text-transform:uppercase;letter-spacing:.1em">ROE</div></div>
+        <div style="text-align:center"><div style="font-size:13px;font-weight:600">${liveOverview.netMargin?.toFixed(1)||'—'}%</div><div style="font-size:9px;color:var(--tobacco);text-transform:uppercase;letter-spacing:.1em">Net Margin</div></div>
+        <div style="text-align:center"><div style="font-size:13px;font-weight:600">${liveOverview.de?.toFixed(2)||'—'}x</div><div style="font-size:9px;color:var(--tobacco);text-transform:uppercase;letter-spacing:.1em">D/E</div></div>
+      </div>` : ''}
+
+      <div class="review-section"><div class="review-section-title">Summary</div><div class="review-text">${review.summary}</div></div>
+      <div class="review-section"><div class="review-section-title">📊 Earnings & Guidance</div><div class="review-text">${review.earningsSection}</div></div>
+      <div class="review-section"><div class="review-section-title">📰 Recent News & Catalysts</div><div class="review-text">${review.newsSection}</div></div>
+      <div class="review-section"><div class="review-section-title">🏦 Buffett Fundamentals</div><div class="review-text">${review.buffettSection}</div></div>
+      <div class="review-section"><div class="review-section-title">⚠️ Key Risks</div><div class="review-text">${review.risks}</div></div>
       <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.3);border-radius:4px;padding:14px 16px;margin-top:4px">
         <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco);margin-bottom:6px">Recommended Action</div>
         <div class="review-text" style="font-weight:600">${review.action}</div>
@@ -1420,7 +1744,20 @@ async function reviewAllPortfolio() {
 
 async function openReviewSilent(idx) {
   const stock = portfolio[idx];
-  const prompt = `Rate ${stock.ticker} as BUY MORE, HOLD, or SELL based on current fundamentals and news. Return ONLY: {"verdict":"BUY MORE|HOLD|SELL"}`;
+
+  // Fetch live data if available
+  let liveCtx = '';
+  if(fmpKey && fmpKey.length > 4) {
+    const [ov, q] = await Promise.all([avGetOverview(stock.ticker), avGetQuote(stock.ticker)]);
+    if(q?.price) { portfolio[idx].currentPrice = q.price; }
+    if(ov) {
+      const sc = computeBuffettScore(ov);
+      liveCtx = ` Live data: P/E=${ov.pe||'N/A'}, ROE=${ov.roe?.toFixed(1)||'N/A'}%, D/E=${ov.de||'N/A'}, NetMargin=${ov.netMargin?.toFixed(1)||'N/A'}%, EarningsGrowth=${ov.earningsGrowthYoy?.toFixed(1)||'N/A'}%. Buffett Score=${sc?.score||'N/A'}/100.`;
+    }
+    await new Promise(r => setTimeout(r, 1200));
+  }
+
+  const prompt = `Rate ${stock.ticker} as BUY MORE, HOLD, or SELL using Buffett value principles.${liveCtx} Return ONLY: {"verdict":"BUY MORE|HOLD|SELL"}`;
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1428,9 +1765,8 @@ async function openReviewSilent(idx) {
       body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 50, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
-    const text = data.content?.[0]?.text || '';
-    const clean = text.replace(/```json|```/g,'').trim();
-    const r = JSON.parse(clean);
+    const text = (data.content?.[0]?.text || '').replace(/```json|```/g,'').trim();
+    const r = JSON.parse(text);
     portfolio[idx].verdict = r.verdict;
   } catch(e) {}
 }
