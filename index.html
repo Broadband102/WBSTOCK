@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Oracle Screen — Portfolio Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Libre+Baskerville:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1209;
+    --paper: #f5f0e8;
+    --aged: #e8dfc8;
+    --gold: #b8932a;
+    --rust: #8b3a1a;
+    --green: #1e4d31;
+    --green-light: #2a5c3f;
+    --red: #8b1a1a;
+    --red-light: #b82a2a;
+    --muted: #7a6e5f;
+    --rule: #c8b89a;
+    --white: #fff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Libre Baskerville', Georgia, serif;
+    min-height: 100vh;
+  }
+
+  /* ── TOP NAV ─────────────────────────────── */
+  .top-nav {
+    background: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 32px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+  }
+
+  .nav-brand {
+    color: var(--gold);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: 0.08em;
+  }
+
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    color: #c8b89a;
+    text-decoration: none;
+    letter-spacing: 0.15em;
+    transition: color 0.15s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--gold); }
+
+  /* ── MASTHEAD ─────────────────────────────── */
+  .masthead {
+    border-bottom: 3px double var(--ink);
+    padding: 28px 40px 20px;
+    text-align: center;
+  }
+  .masthead::before {
+    content: '';
+    display: block;
+    height: 2px;
+    background: var(--ink);
+    margin-bottom: 12px;
+  }
+  .masthead-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .masthead h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 700;
+    line-height: 0.95;
+  }
+  .masthead-sub {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: clamp(13px, 1.8vw, 17px);
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .masthead-meta {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid var(--rule);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  /* ── LAYOUT ───────────────────────────────── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 36px 40px; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+  }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; white-space: nowrap; }
+  .section-rule { flex: 1; height: 1px; background: var(--rule); }
+  .section-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.2em; }
+
+  /* ── API KEY BANNER ───────────────────────── */
+  .api-banner {
+    background: #fff8e8;
+    border: 1px solid var(--gold);
+    border-left: 4px solid var(--gold);
+    padding: 16px 24px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .api-banner-text { flex: 1; min-width: 200px; }
+  .api-banner-text strong { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.15em; display: block; margin-bottom: 4px; }
+  .api-banner-text p { font-size: 12px; color: var(--muted); }
+  .api-input-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .api-input {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    border: 1px solid var(--rule);
+    padding: 8px 12px;
+    background: white;
+    width: 320px;
+    outline: none;
+  }
+  .api-input:focus { border-color: var(--gold); }
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 9px 18px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-gold { background: var(--gold); color: white; }
+  .btn-gold:hover { background: var(--rust); }
+  .btn-outline { background: transparent; border: 1px solid var(--ink); color: var(--ink); }
+  .btn-outline:hover { background: var(--ink); color: var(--paper); }
+  .btn-small { font-size: 10px; padding: 6px 12px; }
+
+  /* ── PORTFOLIO SUMMARY BAR ─────────────────── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-bottom: 36px;
+  }
+  .summary-cell {
+    background: white;
+    padding: 18px 20px;
+  }
+  .summary-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .summary-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .summary-sub { font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-top: 3px; }
+  .pos { color: var(--green-light); }
+  .neg { color: var(--red-light); }
+
+  /* ── ADD POSITION FORM ─────────────────────── */
+  .add-form {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 24px 28px;
+    margin-bottom: 36px;
+  }
+  .add-form h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 140px 140px 140px auto;
+    gap: 10px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .form-input {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    border: 1px solid var(--rule);
+    padding: 8px 10px;
+    background: var(--paper);
+    outline: none;
+    width: 100%;
+  }
+  .form-input:focus { border-color: var(--gold); background: white; }
+
+  /* ── POSITION CARDS ───────────────────────── */
+  .positions-list { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--rule); margin-bottom: 40px; }
+
+  .position-card {
+    background: white;
+    border-bottom: 1px solid var(--rule);
+    overflow: hidden;
+    transition: background 0.15s;
+  }
+  .position-card:last-child { border-bottom: none; }
+
+  .position-header {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .position-main { padding: 20px 24px; }
+
+  .position-top {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .position-ticker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .position-name { font-size: 14px; color: var(--muted); font-style: italic; }
+
+  .position-metrics {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .p-metric { display: flex; flex-direction: column; gap: 2px; }
+  .p-metric-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .p-metric-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .position-pnl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 28px;
+    border-left: 1px solid var(--rule);
+    min-width: 130px;
+    gap: 2px;
+  }
+  .pnl-pct {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .pnl-abs {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .pnl-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .position-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 20px;
+    gap: 8px;
+    border-left: 1px solid var(--rule);
+  }
+
+  /* ── VERDICT BADGE ─────────────────────────── */
+  .verdict-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 6px 14px;
+    border: 2px solid;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .verdict-buy  { color: var(--green); border-color: var(--green); background: rgba(30,77,49,0.06); }
+  .verdict-hold { color: var(--gold);  border-color: var(--gold);  background: rgba(184,147,42,0.06); }
+  .verdict-sell { color: var(--red);   border-color: var(--red);   background: rgba(139,26,26,0.06); }
+  .verdict-pending { color: var(--muted); border-color: var(--rule); }
+
+  /* ── AI ANALYSIS PANEL ─────────────────────── */
+  .analysis-panel {
+    background: #fafaf7;
+    border-top: 1px solid var(--rule);
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+  }
+  .analysis-panel.open {
+    max-height: 2000px;
+    padding: 28px 32px;
+  }
+
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .analysis-block {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 18px 20px;
+  }
+  .analysis-block-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .analysis-block p, .analysis-block li {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .analysis-block ul { padding-left: 18px; }
+  .analysis-block li { margin-bottom: 4px; }
+
+  .verdict-full {
+    background: white;
+    border: 2px solid var(--rule);
+    padding: 20px 24px;
+  }
+  .verdict-full-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .verdict-full-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .verdict-full p {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--ink);
+  }
+
+  .news-list { list-style: none; }
+  .news-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--aged);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .news-item:last-child { border-bottom: none; }
+  .news-source {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  /* Loading animation */
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--rule);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── EMPTY STATE ───────────────────────────── */
+  .empty-state {
+    padding: 64px 40px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed var(--rule);
+  }
+  .empty-icon {
+    font-family: 'Playfair Display', serif;
+    font-size: 56px;
+    color: var(--rule);
+    margin-bottom: 16px;
+    display: block;
+  }
+  .empty-state p { font-style: italic; font-size: 15px; }
+
+  /* ── FOOTER ───────────────────────────────── */
+  footer {
+    border-top: 3px double var(--ink);
+    padding: 24px 40px;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    line-height: 2;
+    margin-top: 40px;
+  }
+  footer a { color: var(--gold); text-decoration: none; }
+
+  /* ── DELETE BUTTON ─────────────────────────── */
+  .btn-delete {
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 4px 8px;
+    transition: all 0.15s;
+  }
+  .btn-delete:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── ANALYZE ALL BTN ───────────────────────── */
+  .analyze-all-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* ── DISCLAIMER ────────────────────────────── */
+  .disclaimer {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-style: italic;
+    border-top: 1px solid var(--rule);
+    padding-top: 20px;
+    margin-top: 16px;
+  }
+
+  /* ── CSV UPLOAD ────────────────────────────── */
+  .csv-section {
+    margin-top: 20px;
+    border-top: 1px dashed var(--rule);
+    padding-top: 20px;
+  }
+  .csv-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.15s;
+  }
+  .csv-toggle:hover { color: var(--gold); }
+  .csv-toggle-arrow { transition: transform 0.2s; display: inline-block; }
+  .csv-toggle.open .csv-toggle-arrow { transform: rotate(90deg); }
+
+  .csv-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .csv-body.open { max-height: 600px; }
+
+  .csv-drop-zone {
+    margin-top: 16px;
+    border: 2px dashed var(--rule);
+    border-radius: 0;
+    padding: 32px 24px;
+    text-align: center;
+    background: var(--paper);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+  .csv-drop-zone:hover, .csv-drop-zone.drag-over {
+    border-color: var(--gold);
+    background: #fffbf0;
+  }
+  .csv-drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .csv-drop-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .csv-drop-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .csv-drop-sub {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .csv-format-info {
+    margin-top: 14px;
+    background: var(--aged);
+    border: 1px solid var(--rule);
+    padding: 12px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--ink);
+  }
+  .csv-format-info strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    font-size: 10px;
+    text-transform: uppercase;
+  }
+
+  .csv-preview {
+    margin-top: 16px;
+    border: 1px solid var(--rule);
+    overflow-x: auto;
+  }
+  .csv-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .csv-preview th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .csv-preview td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--aged);
+  }
+  .csv-preview tr:last-child td { border-bottom: none; }
+  .csv-preview tr:nth-child(even) td { background: var(--paper); }
+  .csv-row-ok td:first-child { border-left: 3px solid var(--green-light); }
+  .csv-row-warn td:first-child { border-left: 3px solid var(--gold); }
+  .csv-row-err td:first-child { border-left: 3px solid var(--red); }
+
+  .csv-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .csv-summary-line {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Robinhood format hint */
+  .platform-tabs {
+    display: flex;
+    gap: 0;
+    margin-top: 16px;
+    border: 1px solid var(--rule);
+    overflow: hidden;
+  }
+  .platform-tab {
+    flex: 1;
+    padding: 8px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--paper);
+    border: none;
+    cursor: pointer;
+    border-right: 1px solid var(--rule);
+    color: var(--muted);
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .platform-tab:last-child { border-right: none; }
+  .platform-tab.active { background: var(--ink); color: var(--gold); }
+  .platform-tab:hover:not(.active) { background: var(--aged); color: var(--ink); }
+
+  .platform-hint {
+    display: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    background: var(--aged);
+    border: 1px solid var(--rule);
+    border-top: none;
+    padding: 12px 16px;
+    line-height: 1.8;
+    color: var(--ink);
+  }
+  .platform-hint.active { display: block; }
+  .platform-hint code {
+    background: var(--ink);
+    color: var(--gold);
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+
+  @media (max-width: 768px) {
+    .container { padding: 20px; }
+    .masthead { padding: 16px 20px; }
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .position-header { grid-template-columns: 1fr; }
+    .position-pnl, .position-actions { border-left: none; border-top: 1px solid var(--rule); flex-direction: row; }
+    .analysis-grid { grid-template-columns: 1fr; }
+    .api-input { width: 100%; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a href="index.html" class="nav-brand">◈ THE ORACLE SCREEN</a>
+  <div class="nav-links">
+    <a href="index.html">Daily Picks</a>
+    <a href="portfolio.html" class="active">My Portfolio</a>
+  </div>
+</nav>
+
+<div class="masthead">
+  <div class="masthead-eyebrow">Personal Portfolio Intelligence</div>
+  <h1>The Portfolio Ledger</h1>
+  <div class="masthead-sub">AI-powered analysis of your holdings — news, earnings calls, fundamentals</div>
+  <div class="masthead-meta">
+    <span id="today-date">—</span>
+    <span>★ ★ ★</span>
+    <span>POWERED BY CLAUDE AI + WEB SEARCH</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- API Key Setup -->
+  <div class="api-banner" id="api-banner">
+    <div class="api-banner-text">
+      <strong>🔑 ANTHROPIC API KEY REQUIRED</strong>
+      <p>The AI analysis uses Claude + live web search. Your key is stored locally in your browser only — never sent anywhere except the Anthropic API.</p>
+    </div>
+    <div class="api-input-row">
+      <input type="password" class="api-input" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+      <button class="btn btn-gold" onclick="saveApiKey()">SAVE KEY</button>
+      <button class="btn btn-outline btn-small" onclick="clearApiKey()">CLEAR</button>
+    </div>
+  </div>
+
+  <!-- Portfolio Summary -->
+  <div class="section-header">
+    <div class="section-title">Portfolio Summary</div>
+    <div class="section-rule"></div>
+    <div class="section-num">01 / OVERVIEW</div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-cell">
+      <div class="summary-label">Total Invested</div>
+      <div class="summary-value" id="total-cost">$0</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-label">Current Value</div>
+      <div class="summary-value" id="total-value">$0</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-label">Total Gain / Loss</div>
+      <div class="summary-value" id="total-pnl">$0</div>
+      <div class="summary-sub" id="total-pnl-pct">0.00%</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-label">Positions</div>
+      <div class="summary-value" id="position-count">0</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-label">Oracle Consensus</div>
+      <div class="summary-value" id="consensus" style="font-size:16px; padding-top:4px;">—</div>
+    </div>
+  </div>
+
+  <!-- Add Position -->
+  <div class="section-header">
+    <div class="section-title">Add a Position</div>
+    <div class="section-rule"></div>
+    <div class="section-num">02 / HOLDINGS</div>
+  </div>
+
+  <div class="add-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Ticker</label>
+        <input type="text" class="form-input" id="new-ticker" placeholder="AAPL" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company (optional)</label>
+        <input type="text" class="form-input" id="new-name" placeholder="Apple Inc.">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Shares</label>
+        <input type="number" class="form-input" id="new-shares" placeholder="10" min="0.001" step="0.001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Avg Cost / Share</label>
+        <input type="number" class="form-input" id="new-cost" placeholder="142.50" min="0.01" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date Purchased</label>
+        <input type="date" class="form-input" id="new-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <button class="btn btn-gold" onclick="addPosition()">+ ADD</button>
+      </div>
+    </div>
+
+    <!-- CSV Upload Section -->
+    <div class="csv-section">
+      <button class="csv-toggle" onclick="toggleCsvPanel(this)">
+        <span class="csv-toggle-arrow">▶</span>
+        OR IMPORT FROM CSV / BROKERAGE EXPORT
+      </button>
+
+      <div class="csv-body" id="csv-body">
+
+        <div class="platform-tabs">
+          <button class="platform-tab active" onclick="showPlatformHint('robinhood', this)">Robinhood</button>
+          <button class="platform-tab" onclick="showPlatformHint('fidelity', this)">Fidelity</button>
+          <button class="platform-tab" onclick="showPlatformHint('schwab', this)">Schwab</button>
+          <button class="platform-tab" onclick="showPlatformHint('etrade', this)">E*Trade</button>
+          <button class="platform-tab" onclick="showPlatformHint('custom', this)">Custom CSV</button>
+        </div>
+
+        <div class="platform-hint active" id="hint-robinhood">
+          <strong>Robinhood Export:</strong>
+          Account &rarr; Statements &amp; History &rarr; Download CSV. The importer auto-detects Robinhood columns: <code>symbol</code>, <code>quantity</code>, <code>average_cost</code>.
+        </div>
+        <div class="platform-hint" id="hint-fidelity">
+          <strong>Fidelity Export:</strong>
+          Accounts &amp; Trade &rarr; Portfolio &rarr; Download (&darr;), choose CSV. Columns like <code>Symbol</code>, <code>Quantity</code>, <code>Average Cost Basis</code> are mapped automatically.
+        </div>
+        <div class="platform-hint" id="hint-schwab">
+          <strong>Schwab Export:</strong>
+          Positions page &rarr; Export (top right). Uses <code>Symbol</code>, <code>Quantity</code>, <code>Price Paid</code>. Extra header rows are skipped automatically.
+        </div>
+        <div class="platform-hint" id="hint-etrade">
+          <strong>E*Trade Export:</strong>
+          Portfolio &rarr; My Portfolio &rarr; Download &rarr; select Positions (not transactions). Uses <code>Symbol</code>, <code>Qty</code>, <code>Price Paid Per Share</code>.
+        </div>
+        <div class="platform-hint" id="hint-custom">
+          <strong>Custom CSV &mdash; required columns:</strong><br>
+          <code>ticker</code> (or <code>symbol</code>) and <code>shares</code> (or <code>quantity</code>)<br>
+          Optional: <code>avg_cost</code> / <code>price_paid</code> / <code>cost_basis</code> &bull; <code>date</code> &bull; <code>name</code><br><br>
+          Example row: <code>AAPL,10,142.50,2023-01-15,Apple Inc.</code>
+        </div>
+
+        <div class="csv-drop-zone" id="csv-drop-zone"
+          ondragover="handleDragOver(event)"
+          ondragleave="handleDragLeave(event)"
+          ondrop="handleDrop(event)">
+          <input type="file" id="csv-file-input" accept=".csv,.txt" onchange="handleFileSelect(event)">
+          <span class="csv-drop-icon">📂</span>
+          <div class="csv-drop-title">Drop your CSV here or click to browse</div>
+          <div class="csv-drop-sub">Supports Robinhood, Fidelity, Schwab, E*Trade &amp; custom formats &bull; Max 500 rows</div>
+        </div>
+
+        <div id="csv-preview-container" style="display:none;">
+          <div class="csv-preview" id="csv-preview-table"></div>
+          <div class="csv-actions">
+            <button class="btn btn-gold" onclick="importCsvRows()">&#x2B07; IMPORT <span id="csv-import-count">0</span> POSITIONS</button>
+            <button class="btn btn-outline btn-small" onclick="clearCsvPreview()">&#x2715; CANCEL</button>
+            <span class="csv-summary-line" id="csv-summary"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Positions -->
+  <div class="analyze-all-row">
+    <button class="btn btn-gold" onclick="analyzeAll()">⚡ ANALYZE ALL WITH AI</button>
+    <button class="btn btn-outline btn-small" onclick="refreshPrices()">↻ REFRESH PRICES</button>
+    <span id="analyze-status" style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"></span>
+  </div>
+
+  <div id="positions-container">
+    <div class="empty-state">
+      <span class="empty-icon">◈</span>
+      <p>No positions yet. Add your first holding above.</p>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    AI analysis uses Claude with live web search including recent news, earnings transcripts, and analyst commentary. This is for informational purposes only and does not constitute financial advice. Always conduct your own research before making investment decisions.
+  </div>
+
+</div>
+
+<footer>
+  THE ORACLE SCREEN — PORTFOLIO LEDGER<br>
+  AI ANALYSIS: ANTHROPIC CLAUDE + LIVE WEB SEARCH<br>
+  <a href="index.html">← BACK TO DAILY PICKS</a> · NOT FINANCIAL ADVICE
+</footer>
+
+<script>
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+let portfolio = JSON.parse(localStorage.getItem('oracle_portfolio') || '[]');
+let apiKey    = localStorage.getItem('oracle_api_key') || '';
+let analyses  = JSON.parse(localStorage.getItem('oracle_analyses') || '{}');
+let livePrices = {};
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+document.getElementById('today-date').textContent =
+  new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+
+if (apiKey) {
+  document.getElementById('api-key-input').value = '••••••••••••••••';
+  document.getElementById('api-banner').style.borderColor = 'var(--green)';
+}
+
+renderAll();
+
+// ──────────────────────────────────────────────
+// API KEY
+// ──────────────────────────────────────────────
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val || val.startsWith('•')) return;
+  apiKey = val;
+  localStorage.setItem('oracle_api_key', val);
+  document.getElementById('api-key-input').value = '••••••••••••••••';
+  document.getElementById('api-banner').style.borderColor = 'var(--green-light)';
+  showStatus('✓ API key saved');
+}
+
+function clearApiKey() {
+  apiKey = '';
+  localStorage.removeItem('oracle_api_key');
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('api-banner').style.borderColor = 'var(--gold)';
+}
+
+// ──────────────────────────────────────────────
+// PORTFOLIO CRUD
+// ──────────────────────────────────────────────
+function addPosition() {
+  const ticker = document.getElementById('new-ticker').value.trim().toUpperCase();
+  const name   = document.getElementById('new-name').value.trim();
+  const shares = parseFloat(document.getElementById('new-shares').value);
+  const cost   = parseFloat(document.getElementById('new-cost').value);
+  const date   = document.getElementById('new-date').value;
+
+  if (!ticker || isNaN(shares) || isNaN(cost) || shares <= 0 || cost <= 0) {
+    alert('Please fill in ticker, shares, and cost per share.');
+    return;
+  }
+
+  // Check if ticker already exists — if so, merge (average cost)
+  const existing = portfolio.find(p => p.ticker === ticker);
+  if (existing) {
+    const totalShares = existing.shares + shares;
+    existing.avgCost = ((existing.shares * existing.avgCost) + (shares * cost)) / totalShares;
+    existing.shares  = totalShares;
+    if (date && (!existing.date || date < existing.date)) existing.date = date;
+  } else {
+    portfolio.push({ id: Date.now(), ticker, name, shares, avgCost: cost, date });
+  }
+
+  save();
+  ['new-ticker','new-name','new-shares','new-cost','new-date'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  renderAll();
+  fetchPriceForTicker(ticker);
+}
+
+function removePosition(id) {
+  if (!confirm('Remove this position?')) return;
+  portfolio = portfolio.filter(p => p.id !== id);
+  delete analyses[id];
+  save();
+  renderAll();
+}
+
+function save() {
+  localStorage.setItem('oracle_portfolio', JSON.stringify(portfolio));
+  localStorage.setItem('oracle_analyses', JSON.stringify(analyses));
+}
+
+// ──────────────────────────────────────────────
+// PRICE FETCHING (Yahoo Finance via API)
+// ──────────────────────────────────────────────
+async function fetchPriceForTicker(ticker) {
+  try {
+    // Use Yahoo Finance v8 (no key required for basic quotes)
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('price fetch failed');
+    const data = await res.json();
+    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (price) {
+      livePrices[ticker] = price;
+      renderAll();
+    }
+  } catch(e) {
+    // silently fail — we'll show cost basis
+  }
+}
+
+async function refreshPrices() {
+  showStatus('Refreshing prices...');
+  const tickers = [...new Set(portfolio.map(p => p.ticker))];
+  await Promise.all(tickers.map(t => fetchPriceForTicker(t)));
+  showStatus('✓ Prices updated');
+}
+
+// Fetch all on load
+portfolio.forEach(p => fetchPriceForTicker(p.ticker));
+
+// ──────────────────────────────────────────────
+// RENDERING
+// ──────────────────────────────────────────────
+function renderAll() {
+  renderSummary();
+  renderPositions();
+}
+
+function renderSummary() {
+  let totalCost = 0, totalVal = 0;
+  portfolio.forEach(p => {
+    const cost = p.shares * p.avgCost;
+    const price = livePrices[p.ticker] || p.avgCost;
+    totalCost += cost;
+    totalVal  += p.shares * price;
+  });
+
+  const pnl    = totalVal - totalCost;
+  const pnlPct = totalCost > 0 ? ((pnl / totalCost) * 100) : 0;
+
+  document.getElementById('total-cost').textContent  = fmt$(totalCost);
+  document.getElementById('total-value').textContent = fmt$(totalVal);
+  document.getElementById('total-pnl').textContent   = (pnl >= 0 ? '+' : '') + fmt$(pnl);
+  document.getElementById('total-pnl').className     = 'summary-value ' + (pnl >= 0 ? 'pos' : 'neg');
+  document.getElementById('total-pnl-pct').textContent = (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%';
+  document.getElementById('total-pnl-pct').className = 'summary-sub ' + (pnl >= 0 ? 'pos' : 'neg');
+  document.getElementById('position-count').textContent = portfolio.length;
+
+  // Consensus
+  const verdicts = Object.values(analyses).map(a => a.verdict).filter(Boolean);
+  const counts = { BUY: 0, HOLD: 0, SELL: 0 };
+  verdicts.forEach(v => { if (counts[v] !== undefined) counts[v]++; });
+  const top = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const consensusEl = document.getElementById('consensus');
+  if (verdicts.length === 0) {
+    consensusEl.textContent = '—';
+  } else {
+    const label = top[0][0];
+    consensusEl.textContent = label;
+    consensusEl.className = 'summary-value ' + (label === 'BUY' ? 'pos' : label === 'SELL' ? 'neg' : '');
+    consensusEl.style.fontSize = '20px';
+  }
+}
+
+function renderPositions() {
+  const container = document.getElementById('positions-container');
+  if (portfolio.length === 0) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-icon">◈</span><p>No positions yet. Add your first holding above.</p></div>`;
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'positions-list';
+
+  portfolio.forEach(p => {
+    const price   = livePrices[p.ticker] || p.avgCost;
+    const cost    = p.shares * p.avgCost;
+    const curVal  = p.shares * price;
+    const pnl     = curVal - cost;
+    const pnlPct  = ((pnl / cost) * 100);
+    const analysis = analyses[p.id];
+
+    const card = document.createElement('div');
+    card.className = 'position-card';
+    card.id = `card-${p.id}`;
+
+    const verdictClass = analysis?.verdict === 'BUY' ? 'verdict-buy' :
+                         analysis?.verdict === 'SELL' ? 'verdict-sell' :
+                         analysis?.verdict === 'HOLD' ? 'verdict-hold' : 'verdict-pending';
+    const verdictText  = analysis?.verdict || 'ANALYZE';
+
+    card.innerHTML = `
+      <div class="position-header">
+        <div class="position-main">
+          <div class="position-top">
+            <span class="position-ticker">${p.ticker}</span>
+            <span class="position-name">${p.name || ''}</span>
+            ${p.date ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">Since ${p.date}</span>` : ''}
+          </div>
+          <div class="position-metrics">
+            <div class="p-metric">
+              <div class="p-metric-label">Shares</div>
+              <div class="p-metric-value">${p.shares.toLocaleString()}</div>
+            </div>
+            <div class="p-metric">
+              <div class="p-metric-label">Avg Cost</div>
+              <div class="p-metric-value">${fmt$(p.avgCost)}</div>
+            </div>
+            <div class="p-metric">
+              <div class="p-metric-label">Current Price</div>
+              <div class="p-metric-value" id="price-${p.ticker}">${livePrices[p.ticker] ? fmt$(livePrices[p.ticker]) : '—'}</div>
+            </div>
+            <div class="p-metric">
+              <div class="p-metric-label">Cost Basis</div>
+              <div class="p-metric-value">${fmt$(cost)}</div>
+            </div>
+            <div class="p-metric">
+              <div class="p-metric-label">Market Value</div>
+              <div class="p-metric-value">${fmt$(curVal)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="position-pnl">
+          <div class="pnl-label">Return</div>
+          <div class="pnl-pct ${pnl >= 0 ? 'pos' : 'neg'}">${(pnl >= 0 ? '+' : '') + pnlPct.toFixed(1)}%</div>
+          <div class="pnl-abs ${pnl >= 0 ? 'pos' : 'neg'}">${(pnl >= 0 ? '+' : '') + fmt$(pnl)}</div>
+        </div>
+
+        <div class="position-actions">
+          <span class="verdict-badge ${verdictClass}" id="verdict-${p.id}">${verdictText}</span>
+          <button class="btn btn-gold btn-small" onclick="analyzePosition('${p.id}')">
+            <span id="analyze-btn-${p.id}">🔍 ANALYZE</span>
+          </button>
+          <button class="btn btn-outline btn-small" onclick="toggleAnalysis('${p.id}')">
+            ${analysis ? '▲ VIEW REPORT' : '▾ DETAILS'}
+          </button>
+          <button class="btn-delete" onclick="removePosition(${p.id})">✕ REMOVE</button>
+        </div>
+      </div>
+
+      <div class="analysis-panel ${analysis ? 'open' : ''}" id="analysis-${p.id}">
+        ${analysis ? renderAnalysisHTML(analysis) : ''}
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(list);
+}
+
+function renderAnalysisHTML(analysis) {
+  if (!analysis) return '';
+  return `
+    <div class="verdict-full">
+      <div class="verdict-full-header">
+        <span class="verdict-badge ${analysis.verdict === 'BUY' ? 'verdict-buy' : analysis.verdict === 'SELL' ? 'verdict-sell' : 'verdict-hold'}">${analysis.verdict}</span>
+        <div class="verdict-full-title">Oracle Verdict — ${analysis.ticker}</div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto;">Updated ${analysis.updated}</span>
+      </div>
+      <p>${analysis.summary || ''}</p>
+    </div>
+
+    <div class="analysis-grid" style="margin-top:20px;">
+      <div class="analysis-block">
+        <div class="analysis-block-title">📰 Recent News & Sentiment</div>
+        ${analysis.news ? `<p>${analysis.news}</p>` : '<p style="color:var(--muted);font-style:italic;">No recent news found.</p>'}
+      </div>
+      <div class="analysis-block">
+        <div class="analysis-block-title">📊 Latest Earnings Analysis</div>
+        ${analysis.earnings ? `<p>${analysis.earnings}</p>` : '<p style="color:var(--muted);font-style:italic;">No recent earnings data.</p>'}
+      </div>
+      <div class="analysis-block">
+        <div class="analysis-block-title">⚖️ Valuation vs. Entry Price</div>
+        ${analysis.valuation ? `<p>${analysis.valuation}</p>` : '<p style="color:var(--muted);font-style:italic;">—</p>'}
+      </div>
+      <div class="analysis-block">
+        <div class="analysis-block-title">🔭 Forward Outlook</div>
+        ${analysis.outlook ? `<p>${analysis.outlook}</p>` : '<p style="color:var(--muted);font-style:italic;">—</p>'}
+      </div>
+    </div>
+
+    ${analysis.risks ? `
+    <div class="analysis-block" style="margin-top:0;">
+      <div class="analysis-block-title">⚠️ Key Risks to Monitor</div>
+      <p>${analysis.risks}</p>
+    </div>` : ''}
+  `;
+}
+
+// ──────────────────────────────────────────────
+// AI ANALYSIS
+// ──────────────────────────────────────────────
+async function analyzePosition(posId) {
+  if (!apiKey) {
+    alert('Please enter your Anthropic API key above first.');
+    return;
+  }
+
+  const position = portfolio.find(p => p.id == posId);
+  if (!position) return;
+
+  const price = livePrices[position.ticker] || position.avgCost;
+  const pnlPct = (((price - position.avgCost) / position.avgCost) * 100).toFixed(1);
+
+  // Update UI to loading state
+  const btnEl = document.getElementById(`analyze-btn-${posId}`);
+  const verdictEl = document.getElementById(`verdict-${posId}`);
+  const panelEl = document.getElementById(`analysis-${posId}`);
+
+  btnEl.innerHTML = `<span class="spinner"></span><span class="loading-dots">Analyzing</span>`;
+  verdictEl.textContent = '...';
+  verdictEl.className = 'verdict-badge verdict-pending';
+  panelEl.innerHTML = `<div style="padding:24px 32px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);"><span class="spinner"></span> Claude is searching the web for news, earnings transcripts, and analyst reports on ${position.ticker}...</div>`;
+  panelEl.classList.add('open');
+
+  const prompt = `You are a value investor in the tradition of Warren Buffett and Charlie Munger. Analyze the following stock position and give a clear BUY MORE / HOLD / SELL recommendation.
+
+POSITION DETAILS:
+- Ticker: ${position.ticker}
+- Company: ${position.name || position.ticker}
+- Shares held: ${position.shares}
+- Average cost per share: $${position.avgCost.toFixed(2)}
+- Current market price: $${price.toFixed(2)}
+- Current return: ${pnlPct}%
+- Date first purchased: ${position.date || 'unknown'}
+
+YOUR TASK:
+Search the web thoroughly for:
+1. The most recent news articles about ${position.ticker} in the last 30 days
+2. The most recent earnings call transcript or earnings results (look for the actual call highlights, management guidance, and any analyst Q&A)
+3. Current analyst ratings and price targets
+4. Any major business developments, competitive threats, or catalysts
+5. Current valuation metrics vs. historical averages and peers
+
+Then respond ONLY with a valid JSON object in this exact format (no markdown, no commentary outside the JSON):
+
+{
+  "verdict": "BUY" or "HOLD" or "SELL",
+  "summary": "2-3 sentence overall verdict and rationale, referencing the investor's specific entry price of $${position.avgCost.toFixed(2)}",
+  "news": "Summary of the most important recent news and what it means for the investment thesis. Include specific dates and headlines.",
+  "earnings": "Analysis of the most recent earnings call: key metrics beat/miss, management guidance, tone of the call, anything from the Q&A that stands out",
+  "valuation": "Is the stock cheap, fair, or expensive at the current price of $${price.toFixed(2)}? Compare to intrinsic value estimates. Given cost basis of $${position.avgCost.toFixed(2)}, should investor add more or trim?",
+  "outlook": "What are the 1-2 year catalysts? What would need to be true for the stock to outperform?",
+  "risks": "Top 2-3 specific risks to the thesis that the investor should monitor closely"
+}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || 'API error');
+    }
+
+    const data = await response.json();
+
+    // Extract text from response (may include tool use blocks)
+    let text = '';
+    for (const block of data.content) {
+      if (block.type === 'text') text += block.text;
+    }
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse AI response');
+
+    const result = JSON.parse(jsonMatch[0]);
+    result.ticker  = position.ticker;
+    result.updated = new Date().toLocaleString();
+
+    analyses[posId] = result;
+    save();
+
+    // Update verdict badge
+    verdictEl.textContent = result.verdict;
+    verdictEl.className = 'verdict-badge ' + (result.verdict === 'BUY' ? 'verdict-buy' : result.verdict === 'SELL' ? 'verdict-sell' : 'verdict-hold');
+
+    // Render analysis panel
+    panelEl.innerHTML = renderAnalysisHTML(result);
+
+    btnEl.innerHTML = '✓ ANALYZED';
+    renderSummary();
+
+  } catch(e) {
+    btnEl.innerHTML = '🔍 ANALYZE';
+    verdictEl.textContent = 'ERROR';
+    panelEl.innerHTML = `<div style="padding:20px 32px; color:var(--red); font-family:'IBM Plex Mono',monospace; font-size:12px;">
+      Error: ${e.message}<br><br>
+      Common issues:<br>
+      • Invalid API key (check it has web search access)<br>
+      • Rate limit — wait a moment and try again<br>
+      • Network error
+    </div>`;
+    console.error('Analysis error:', e);
+  }
+}
+
+async function analyzeAll() {
+  if (!apiKey) { alert('Please enter your Anthropic API key first.'); return; }
+  if (portfolio.length === 0) return;
+
+  showStatus(`Analyzing ${portfolio.length} positions...`);
+  for (const p of portfolio) {
+    await analyzePosition(p.id);
+    await new Promise(r => setTimeout(r, 1500)); // Rate limit buffer
+  }
+  showStatus('✓ All positions analyzed');
+}
+
+// ──────────────────────────────────────────────
+// UI HELPERS
+// ──────────────────────────────────────────────
+function toggleAnalysis(posId) {
+  const panel = document.getElementById(`analysis-${posId}`);
+  panel.classList.toggle('open');
+}
+
+function fmt$(n) {
+  if (isNaN(n)) return '$—';
+  return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function showStatus(msg) {
+  const el = document.getElementById('analyze-status');
+  el.textContent = msg;
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+}
+
+// ──────────────────────────────────────────────
+// CSV IMPORT
+// ──────────────────────────────────────────────
+
+let csvParsedRows = []; // holds parsed-but-not-yet-imported rows
+
+function toggleCsvPanel(btn) {
+  btn.classList.toggle('open');
+  document.getElementById('csv-body').classList.toggle('open');
+}
+
+function showPlatformHint(platform, tab) {
+  document.querySelectorAll('.platform-hint').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.platform-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('hint-' + platform).classList.add('active');
+  tab.classList.add('active');
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('csv-drop-zone').classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  document.getElementById('csv-drop-zone').classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('csv-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  if (!file.name.match(/\.(csv|txt)$/i)) {
+    alert('Please upload a .csv or .txt file.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => parseCSV(e.target.result);
+  reader.readAsText(file);
+}
+
+// ── Column name aliases ────────────────────────
+const COL_ALIASES = {
+  ticker:    ['ticker','symbol','stock','sym','security','instrument'],
+  shares:    ['shares','quantity','qty','units','amount','num_shares','share_quantity'],
+  avg_cost:  ['avg_cost','average_cost','avgcost','cost','price_paid','average_cost_basis',
+              'cost_basis','avg_price','average_price','unit_cost','price','purchase_price',
+              'cost_per_share','avg cost basis','average cost basis'],
+  name:      ['name','company','description','company_name','security_name','full_name'],
+  date:      ['date','purchase_date','date_acquired','acquired','open_date','trade_date','bought'],
+};
+
+function normalizeHeader(h) {
+  return h.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_');
+}
+
+function detectColumn(headers, aliases) {
+  const norm = headers.map(normalizeHeader);
+  for (const alias of aliases) {
+    const idx = norm.indexOf(normalizeHeader(alias));
+    if (idx !== -1) return idx;
+  }
+  // fuzzy: partial match
+  for (const alias of aliases) {
+    const idx = norm.findIndex(h => h.includes(normalizeHeader(alias)) || normalizeHeader(alias).includes(h));
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+function parseCSV(text) {
+  // Normalize line endings
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+
+  // Find the header row (skip lines that don't look like headers, e.g. Schwab "Positions" title rows)
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const cols = splitCSVLine(lines[i]);
+    const norm = cols.map(normalizeHeader);
+    const hasTickerish = COL_ALIASES.ticker.some(a => norm.includes(normalizeHeader(a)) || norm.some(n => n.includes(normalizeHeader(a))));
+    if (hasTickerish) { headerIdx = i; break; }
+  }
+
+  if (headerIdx === -1) {
+    showCsvError('Could not find a column named "symbol", "ticker", or similar. Check your file format or try the Custom CSV tab.');
+    return;
+  }
+
+  const headers = splitCSVLine(lines[headerIdx]);
+
+  // Map column indices
+  const colTicker  = detectColumn(headers, COL_ALIASES.ticker);
+  const colShares  = detectColumn(headers, COL_ALIASES.shares);
+  const colCost    = detectColumn(headers, COL_ALIASES.avg_cost);
+  const colName    = detectColumn(headers, COL_ALIASES.name);
+  const colDate    = detectColumn(headers, COL_ALIASES.date);
+
+  if (colTicker === -1) {
+    showCsvError('No ticker/symbol column found. Detected headers: ' + headers.join(', '));
+    return;
+  }
+  if (colShares === -1) {
+    showCsvError('No shares/quantity column found. Detected headers: ' + headers.join(', '));
+    return;
+  }
+
+  // Parse data rows
+  const rows = [];
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const cols = splitCSVLine(lines[i]);
+    if (cols.length < 2) continue;
+
+    const rawTicker = (cols[colTicker] || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
+    if (!rawTicker || rawTicker.length > 8) continue; // skip empty or clearly wrong rows
+
+    const rawShares = colShares !== -1 ? cleanNumber(cols[colShares]) : null;
+    const rawCost   = colCost   !== -1 ? cleanNumber(cols[colCost])   : null;
+    const rawName   = colName   !== -1 ? (cols[colName] || '').trim() : '';
+    const rawDate   = colDate   !== -1 ? parseDate(cols[colDate])     : '';
+
+    const sharesNum = parseFloat(rawShares);
+    const costNum   = parseFloat(rawCost);
+
+    let status = 'ok';
+    let warning = '';
+
+    if (isNaN(sharesNum) || sharesNum <= 0) {
+      status = 'err';
+      warning = 'Invalid shares';
+    } else if (!rawCost || isNaN(costNum) || costNum <= 0) {
+      status = 'warn';
+      warning = 'No cost — will default to $0';
+    }
+
+    rows.push({
+      ticker: rawTicker,
+      name:   rawName,
+      shares: isNaN(sharesNum) ? 0 : sharesNum,
+      avg_cost: isNaN(costNum) ? 0 : costNum,
+      date:   rawDate,
+      status, warning,
+      _raw: cols
+    });
+  }
+
+  if (rows.length === 0) {
+    showCsvError('No valid data rows found after the header. Check that your file has stock data below the column headers.');
+    return;
+  }
+
+  csvParsedRows = rows;
+  renderCsvPreview(headers, rows, colTicker, colShares, colCost, colName, colDate);
+}
+
+function splitCSVLine(line) {
+  // Handle quoted fields
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function cleanNumber(str) {
+  if (!str) return '';
+  // Remove $, commas, spaces, parentheses (negative notation)
+  return str.replace(/[$,\s]/g, '').replace(/\(([^)]+)\)/, '-$1');
+}
+
+function parseDate(str) {
+  if (!str) return '';
+  const s = str.trim();
+  // Try YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  // Try MM/DD/YYYY
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  return '';
+}
+
+function renderCsvPreview(headers, rows, colTicker, colShares, colCost, colName, colDate) {
+  const okRows   = rows.filter(r => r.status === 'ok').length;
+  const warnRows = rows.filter(r => r.status === 'warn').length;
+  const errRows  = rows.filter(r => r.status === 'err').length;
+
+  let tableHTML = `<table><thead><tr>
+    <th>Ticker</th><th>Company</th><th>Shares</th><th>Avg Cost</th><th>Date</th><th>Status</th>
+  </tr></thead><tbody>`;
+
+  rows.slice(0, 50).forEach(r => {
+    const statusIcon = r.status === 'ok' ? '✓' : r.status === 'warn' ? '⚠' : '✗';
+    const statusColor = r.status === 'ok' ? 'var(--green)' : r.status === 'warn' ? 'var(--gold)' : 'var(--red)';
+    tableHTML += `<tr class="csv-row-${r.status}">
+      <td><strong>${r.ticker}</strong></td>
+      <td style="color:var(--muted)">${r.name || '—'}</td>
+      <td>${r.shares > 0 ? r.shares.toLocaleString() : '—'}</td>
+      <td>${r.avg_cost > 0 ? '$' + r.avg_cost.toFixed(2) : '—'}</td>
+      <td style="color:var(--muted)">${r.date || '—'}</td>
+      <td style="color:${statusColor};font-family:'IBM Plex Mono',monospace;font-size:10px;">${statusIcon} ${r.warning || 'Ready'}</td>
+    </tr>`;
+  });
+
+  if (rows.length > 50) {
+    tableHTML += `<tr><td colspan="6" style="text-align:center;font-style:italic;color:var(--muted);padding:12px;">... and ${rows.length - 50} more rows</td></tr>`;
+  }
+
+  tableHTML += '</tbody></table>';
+
+  const importable = rows.filter(r => r.status !== 'err').length;
+  document.getElementById('csv-preview-table').innerHTML = tableHTML;
+  document.getElementById('csv-import-count').textContent = importable;
+  document.getElementById('csv-summary').textContent =
+    `${rows.length} rows parsed · ${okRows} ready · ${warnRows} warnings · ${errRows} skipped`;
+  document.getElementById('csv-preview-container').style.display = 'block';
+}
+
+function showCsvError(msg) {
+  document.getElementById('csv-preview-table').innerHTML =
+    `<div style="padding:16px 20px;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:12px;">✗ ${msg}</div>`;
+  document.getElementById('csv-import-count').textContent = '0';
+  document.getElementById('csv-summary').textContent = '';
+  document.getElementById('csv-preview-container').style.display = 'block';
+}
+
+function importCsvRows() {
+  const importable = csvParsedRows.filter(r => r.status !== 'err');
+  if (importable.length === 0) {
+    alert('No valid rows to import.');
+    return;
+  }
+
+  let added = 0, merged = 0;
+
+  importable.forEach(r => {
+    const existing = portfolio.find(p => p.ticker === r.ticker);
+    if (existing) {
+      // Merge: weighted average cost
+      const totalShares = existing.shares + r.shares;
+      existing.avgCost = ((existing.shares * existing.avgCost) + (r.shares * (r.avg_cost || existing.avgCost))) / totalShares;
+      existing.shares = totalShares;
+      if (r.date && (!existing.date || r.date < existing.date)) existing.date = r.date;
+      if (r.name && !existing.name) existing.name = r.name;
+      merged++;
+    } else {
+      portfolio.push({
+        id: Date.now() + Math.random(),
+        ticker:  r.ticker,
+        name:    r.name || '',
+        shares:  r.shares,
+        avgCost: r.avg_cost || 0,
+        date:    r.date || '',
+      });
+      added++;
+    }
+  });
+
+  save();
+  clearCsvPreview();
+  renderAll();
+  portfolio.forEach(p => fetchPriceForTicker(p.ticker));
+
+  showStatus(`✓ Imported ${added} new · ${merged} merged`);
+
+  // Close the CSV panel
+  const toggle = document.querySelector('.csv-toggle');
+  const body   = document.getElementById('csv-body');
+  if (toggle.classList.contains('open')) {
+    toggle.classList.remove('open');
+    body.classList.remove('open');
+  }
+}
+
+function clearCsvPreview() {
+  csvParsedRows = [];
+  document.getElementById('csv-preview-container').style.display = 'none';
+  document.getElementById('csv-preview-table').innerHTML = '';
+  document.getElementById('csv-file-input').value = '';
+}
+</script>
+</body>
+</html>
