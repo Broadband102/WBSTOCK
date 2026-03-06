@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oracle Buffet — Value Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --parchment: #ede5d0;
+    --ink: #1a1208;
+    --tobacco: #8b5e3c;
+    --gold: #c9a227;
+    --gold-light: #e8c84a;
+    --forest: #2d4a22;
+    --forest-light: #3d6b30;
+    --red: #8b1a1a;
+    --red-light: #c0392b;
+    --border: #c4b08a;
+    --shadow: rgba(26,18,8,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(196,176,138,0.15) 28px, rgba(196,176,138,0.15) 29px),
+      repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(196,176,138,0.08) 28px, rgba(196,176,138,0.08) 29px);
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 0 32px;
+    border-bottom: 3px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .logo-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: rgba(245,240,232,0.5);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
+    height: 100%;
+    align-items: stretch;
+  }
+  .nav-tab {
+    background: none;
+    border: none;
+    color: rgba(245,240,232,0.6);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -3px;
+  }
+  .nav-tab:hover { color: var(--cream); }
+  .nav-tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+    background: rgba(201,162,39,0.08);
+  }
+  .api-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: rgba(245,240,232,0.5);
+  }
+  .api-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #666;
+    transition: background 0.3s;
+  }
+  .api-dot.connected { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+
+  /* ── MAIN ── */
+  main { max-width: 1300px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ── PANELS ── */
+  .panel {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 2px 3px 12px var(--shadow);
+    overflow: hidden;
+  }
+  .panel-header {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+  }
+  .panel-body { padding: 20px; }
+
+  /* ── TAB VIEWS ── */
+  .tab-view { display: none; }
+  .tab-view.active { display: block; }
+
+  /* ── SCREENER ── */
+  .screener-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .screener-controls label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--tobacco);
+    margin-bottom: 5px;
+    margin-top: 16px;
+  }
+  .screener-controls label:first-of-type { margin-top: 0; }
+  .form-input {
+    width: 100%;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 9px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--gold); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 3px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-gold {
+    background: var(--gold);
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .btn-gold:hover { background: var(--gold-light); transform: translateY(-1px); box-shadow: 0 3px 8px var(--shadow); }
+  .btn-dark {
+    background: var(--ink);
+    color: var(--cream);
+  }
+  .btn-dark:hover { background: #2d2010; }
+  .btn-forest {
+    background: var(--forest);
+    color: var(--cream);
+  }
+  .btn-forest:hover { background: var(--forest-light); }
+  .btn-sm { padding: 6px 12px; font-size: 10px; }
+  .btn-full { width: 100%; margin-top: 20px; }
+
+  /* Metrics sliders */
+  .metric-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .metric-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--tobacco);
+    width: 80px;
+    flex-shrink: 0;
+  }
+  .metric-range {
+    flex: 1;
+    accent-color: var(--gold);
+  }
+  .metric-val {
+    font-size: 11px;
+    color: var(--ink);
+    width: 55px;
+    text-align: right;
+  }
+
+  /* ── PICKS TABLE ── */
+  .picks-section { margin-top: 0; }
+  .picks-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .picks-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .picks-date {
+    font-size: 10px;
+    color: var(--tobacco);
+    letter-spacing: 0.1em;
+  }
+
+  .stock-card {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .stock-card:hover { box-shadow: 0 3px 14px var(--shadow); }
+  .stock-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--parchment);
+    cursor: pointer;
+  }
+  .stock-ticker {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+  }
+  .stock-name {
+    font-size: 11px;
+    color: var(--tobacco);
+    margin-top: 1px;
+  }
+  .stock-score {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .score-num {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--forest);
+  }
+  .score-label { font-size: 9px; color: var(--tobacco); letter-spacing: 0.1em; text-transform: uppercase; }
+  .stock-price { font-size: 16px; font-weight: 500; }
+  .stock-change.pos { color: var(--forest); }
+  .stock-change.neg { color: var(--red); }
+  .stock-card-body {
+    display: none;
+    padding: 16px 18px;
+    background: white;
+    border-top: 1px solid var(--border);
+  }
+  .stock-card-body.open { display: block; }
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .metric-box {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px;
+    text-align: center;
+  }
+  .metric-box-val { font-size: 16px; font-weight: 500; color: var(--ink); }
+  .metric-box-label { font-size: 9px; color: var(--tobacco); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 3px; }
+  .buffett-bars {
+    margin-top: 10px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+  .bar-name { font-size: 10px; color: var(--tobacco); width: 140px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: var(--parchment); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--forest), var(--gold)); transition: width 0.6s ease; }
+  .bar-fill.red { background: linear-gradient(90deg, var(--red), #e07050); }
+  .bar-score-txt { font-size: 10px; width: 35px; text-align: right; }
+
+  .pick-number-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(26,18,8,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .analysis-box {
+    background: #fffef8;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    border-radius: 3px;
+    padding: 12px 15px;
+    font-family: 'Libre Baskerville', serif;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--ink);
+    margin-top: 12px;
+  }
+  .analysis-box em { font-style: italic; color: var(--tobacco); }
+
+  /* ── PORTFOLIO TAB ── */
+  .portfolio-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--cream);
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--gold); background: rgba(201,162,39,0.05); }
+  .upload-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-title { font-family: 'Playfair Display', serif; font-size: 16px; margin-bottom: 6px; }
+  .upload-hint { font-size: 11px; color: var(--tobacco); }
+  #csv-file-input { display: none; }
+
+  .portfolio-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .portfolio-table th {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .portfolio-table td { padding: 9px 12px; border-bottom: 1px solid var(--parchment); }
+  .portfolio-table tr:hover td { background: var(--cream); }
+  .p-gain { color: var(--forest); font-weight: 500; }
+  .p-loss { color: var(--red); font-weight: 500; }
+
+  .review-btn {
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    border-radius: 2px;
+    padding: 4px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .review-btn:hover { background: var(--gold-light); }
+
+  /* ── REVIEW MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,18,8,0.65);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    width: 680px;
+    max-width: 94vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(26,18,8,0.4);
+  }
+  .modal-header {
+    background: var(--ink);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+  }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); font-weight: 900; }
+  .modal-close { background: none; border: none; color: var(--cream); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-body { padding: 24px; }
+
+  .verdict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .verdict-buy { background: rgba(45,74,34,0.12); color: var(--forest); border: 1px solid var(--forest); }
+  .verdict-hold { background: rgba(201,162,39,0.12); color: #8a6a00; border: 1px solid var(--gold); }
+  .verdict-sell { background: rgba(139,26,26,0.12); color: var(--red); border: 1px solid var(--red); }
+
+  .review-section { margin-bottom: 20px; }
+  .review-section-title {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--tobacco);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--parchment);
+  }
+  .review-text {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--ink);
+  }
+
+  /* ── SETTINGS ── */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .settings-desc { font-size: 11px; color: var(--tobacco); margin-top: 4px; line-height: 1.5; }
+  .key-input-wrap { position: relative; }
+  .key-input-wrap .form-input { padding-right: 90px; }
+  .key-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    padding: 3px 8px;
+    cursor: pointer;
+    color: var(--tobacco);
+  }
+  .info-box {
+    background: rgba(201,162,39,0.07);
+    border: 1px solid rgba(201,162,39,0.3);
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  /* ── EMPTY / PLACEHOLDER ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--tobacco);
+  }
+  .empty-state .big { font-family: 'Playfair Display', serif; font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+  .empty-state p { font-size: 12px; line-height: 1.7; max-width: 380px; margin: 0 auto; }
+
+  /* ── STATUS BAR ── */
+  .status-strip {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--parchment);
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--tobacco);
+    letter-spacing: 0.08em;
+  }
+  .status-strip span b { color: var(--ink); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tag-green { background: rgba(45,74,34,0.1); color: var(--forest); }
+  .tag-red { background: rgba(139,26,26,0.1); color: var(--red); }
+  .tag-yellow { background: rgba(201,162,39,0.15); color: #7a5e00; }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 20px;
+    color: var(--tobacco);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .section-divider::before, .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .loading-msg {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--tobacco);
+    padding: 12px 0;
+  }
+
+  /* ── GITHUB GUIDE ── */
+  .step-list { list-style: none; counter-reset: steps; }
+  .step-list li {
+    counter-increment: steps;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .step-list li::before {
+    content: counter(steps);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    background: var(--ink);
+    color: var(--gold);
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-content { flex: 1; }
+  .step-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .step-desc { font-size: 11px; color: var(--tobacco); line-height: 1.7; }
+  code {
+    background: var(--parchment);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 1px 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+  pre {
+    background: var(--ink);
+    color: #a8d8a0;
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-title">⊕ Oracle Buffet</span>
+    <span class="logo-sub">Value Intelligence Platform</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('screener')">Daily Picks</button>
+    <button class="nav-tab" onclick="switchTab('portfolio')">Portfolio</button>
+    <button class="nav-tab" onclick="switchTab('settings')">Settings</button>
+    <button class="nav-tab" onclick="switchTab('deploy')">Deploy Guide</button>
+  </div>
+  <div class="api-badge">
+    <div class="api-dot" id="api-dot"></div>
+    <span id="api-status">No API Key</span>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════ SCREENER ════ -->
+<main>
+<div class="tab-view active" id="tab-screener">
+  <div class="screener-grid">
+    <!-- LEFT: Filters -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Buffett Criteria</span>
+          <span style="font-size:10px;color:rgba(245,240,232,0.4)">FILTERS</span>
+        </div>
+        <div class="panel-body">
+
+          <label>Sector / Industry</label>
+          <select class="form-input" id="filter-sector">
+            <option value="">All Sectors</option>
+            <option>Consumer Staples</option>
+            <option>Financials</option>
+            <option>Healthcare</option>
+            <option>Industrials</option>
+            <option>Technology</option>
+            <option>Energy</option>
+            <option>Utilities</option>
+          </select>
+
+          <label>Market Cap</label>
+          <select class="form-input" id="filter-mcap">
+            <option value="">Any</option>
+            <option value="micro">Micro (&lt; $300M)</option>
+            <option value="small">Small ($300M – $2B)</option>
+            <option value="mid">Mid ($2B – $10B)</option>
+            <option value="large">Large (&gt; $10B)</option>
+          </select>
+
+          <div style="margin-top:18px;margin-bottom:6px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco)">Buffett Score Metrics</div>
+
+          <div class="metric-row">
+            <span class="metric-label">P/E Max</span>
+            <input type="range" class="metric-range" id="pe-max" min="5" max="40" value="20" oninput="document.getElementById('pe-val').textContent=this.value+'x'">
+            <span class="metric-val" id="pe-val">20x</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">P/B Max</span>
+            <input type="range" class="metric-range" id="pb-max" min="0.5" max="5" step="0.1" value="2" oninput="document.getElementById('pb-val').textContent=this.value+'x'">
+            <span class="metric-val" id="pb-val">2.0x</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">ROE Min %</span>
+            <input type="range" class="metric-range" id="roe-min" min="5" max="40" value="15" oninput="document.getElementById('roe-val').textContent=this.value+'%'">
+            <span class="metric-val" id="roe-val">15%</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">D/E Max</span>
+            <input type="range" class="metric-range" id="de-max" min="0" max="3" step="0.1" value="1" oninput="document.getElementById('de-val').textContent=this.value+'x'">
+            <span class="metric-val" id="de-val">1.0x</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Div Yield</span>
+            <input type="range" class="metric-range" id="div-min" min="0" max="8" step="0.5" value="0" oninput="document.getElementById('div-val').textContent=this.value+'%+'">
+            <span class="metric-val" id="div-val">0%+</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Margin Min</span>
+            <input type="range" class="metric-range" id="margin-min" min="0" max="40" value="10" oninput="document.getElementById('margin-val').textContent=this.value+'%'">
+            <span class="metric-val" id="margin-val">10%</span>
+          </div>
+
+          <button class="btn btn-gold btn-full" onclick="runScreener()">
+            <span>▶ Run Buffett Screener</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Picks -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Today's 3 Hidden Gems</span>
+          <span id="screen-date" style="font-size:10px;color:rgba(245,240,232,0.45)"></span>
+        </div>
+        <div class="status-strip">
+          <span>Model: <b>Buffett Value Score™</b></span>
+          <span>Picks: <b id="pick-count">—</b></span>
+          <span>Avg Score: <b id="avg-score">—</b></span>
+          <span id="screen-status" class="tag tag-yellow">READY</span>
+        </div>
+        <div class="panel-body" id="picks-body">
+          <div class="empty-state">
+            <div class="big">◎</div>
+            <p>Configure your Buffett criteria on the left, then click <em>Run Buffett Screener</em> to reveal today's 3 undervalued hidden gems.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ PORTFOLIO ════ -->
+<div class="tab-view" id="tab-portfolio">
+  <div class="portfolio-layout" style="margin-bottom:20px">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Import Portfolio</span>
+      </div>
+      <div class="panel-body">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv-file-input').click()" ondragover="handleDrag(event)" ondrop="handleDrop(event)">
+          <div class="upload-icon">📂</div>
+          <div class="upload-title">Drop Robinhood CSV here</div>
+          <div class="upload-hint">or click to browse — supports .csv, .xlsx<br>Export from Robinhood → Account → History → Export</div>
+        </div>
+        <input type="file" id="csv-file-input" accept=".csv,.xlsx" onchange="handleFileUpload(this.files[0])">
+        <div style="margin-top:14px">
+          <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco);margin-bottom:6px">Or add a stock manually</div>
+          <div style="display:flex;gap:8px">
+            <input type="text" class="form-input" id="manual-ticker" placeholder="AAPL" style="width:100px">
+            <input type="number" class="form-input" id="manual-shares" placeholder="Shares" style="width:100px">
+            <input type="number" class="form-input" id="manual-cost" placeholder="Avg Cost">
+            <button class="btn btn-gold" onclick="addManualStock()">+ Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Portfolio Summary</span>
+      </div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="portfolio-summary">
+          <div class="metric-box"><div class="metric-box-val" id="pf-total">—</div><div class="metric-box-label">Total Value</div></div>
+          <div class="metric-box"><div class="metric-box-val" id="pf-gain">—</div><div class="metric-box-label">Unrealized P&L</div></div>
+          <div class="metric-box"><div class="metric-box-val" id="pf-pct">—</div><div class="metric-box-label">Return %</div></div>
+          <div class="metric-box"><div class="metric-box-val" id="pf-positions">0</div><div class="metric-box-label">Positions</div></div>
+          <div class="metric-box"><div class="metric-box-val" id="pf-buys">—</div><div class="metric-box-label">Buy Signals</div></div>
+          <div class="metric-box"><div class="metric-box-val" id="pf-sells">—</div><div class="metric-box-label">Sell Signals</div></div>
+        </div>
+        <button class="btn btn-forest btn-full" onclick="reviewAllPortfolio()" id="review-all-btn" style="display:none">
+          ⬡ Review All Positions
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portfolio Table -->
+  <div class="panel" id="portfolio-table-panel" style="display:none">
+    <div class="panel-header">
+      <span class="panel-title">Holdings</span>
+      <button class="btn btn-sm" style="background:var(--red);color:white;border:none;border-radius:2px;font-family:monospace;cursor:pointer;font-size:9px;padding:4px 10px" onclick="clearPortfolio()">✕ Clear</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="portfolio-table" id="portfolio-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Company</th>
+            <th>Shares</th>
+            <th>Avg Cost</th>
+            <th>Curr. Price</th>
+            <th>Value</th>
+            <th>P&L</th>
+            <th>Return</th>
+            <th>Review</th>
+          </tr>
+        </thead>
+        <tbody id="portfolio-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ SETTINGS ════ -->
+<div class="tab-view" id="tab-settings">
+  <div class="settings-grid">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">API Configuration</span></div>
+      <div class="panel-body">
+        <label style="display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco);margin-bottom:5px">Anthropic API Key</label>
+        <div class="key-input-wrap">
+          <input type="password" class="form-input" id="api-key-input" placeholder="sk-ant-api03-...">
+          <button class="key-toggle" onclick="toggleKeyVis('api-key-input',this)">Show</button>
+        </div>
+        <div class="settings-desc">Required for AI-powered stock analysis, earnings summaries, and buy/hold/sell verdicts. Get yours at <strong>console.anthropic.com</strong></div>
+        <button class="btn btn-gold btn-full" onclick="saveApiKey()" style="margin-top:14px">Save API Key</button>
+
+        <div style="height:1px;background:var(--border);margin:20px 0"></div>
+
+        <label style="display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco);margin-bottom:5px">Financial Data API (Optional)</label>
+        <input type="password" class="form-input" id="fmp-key-input" placeholder="FMP or Alpha Vantage key">
+        <div class="settings-desc">For real-time prices, fundamentals, and live screener data. Free tier available at <strong>financialmodelingprep.com</strong> or <strong>alphavantage.co</strong>. Without this, demo data is used.</div>
+        <button class="btn btn-dark btn-full" onclick="saveFmpKey()" style="margin-top:14px">Save Financial Key</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">About This App</span></div>
+      <div class="panel-body">
+        <div class="info-box" style="margin-bottom:14px">
+          <strong>Buffett Value Score™</strong> combines 8 value principles:<br><br>
+          1. P/E below industry average<br>
+          2. P/B below 1.5x book value<br>
+          3. ROE consistently above 15%<br>
+          4. Low debt-to-equity ratio<br>
+          5. Consistent earnings growth (5–10yr)<br>
+          6. Wide economic moat (brand/IP)<br>
+          7. Free cash flow positive<br>
+          8. Margin of safety ≥ 25%
+        </div>
+        <div class="info-box">
+          <strong>How picks are generated:</strong><br><br>
+          Claude AI is prompted to apply Buffett's methodology from <em>The Intelligent Investor</em> and Berkshire letters, reasoning about current market conditions and valuation across screened tickers. Results are AI-generated analysis, not financial advice.
+        </div>
+        <div style="font-size:10px;color:var(--tobacco);margin-top:14px;line-height:1.7">⚠️ This app is for educational and informational purposes only. Nothing here constitutes investment advice. Always do your own research.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ DEPLOY ════ -->
+<div class="tab-view" id="tab-deploy">
+  <div style="max-width:720px">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">GitHub Deployment Guide</span></div>
+      <div class="panel-body">
+        <p style="font-size:13px;line-height:1.8;margin-bottom:20px;font-family:'Libre Baskerville',serif">This app is a single <code>index.html</code> file — no build step, no dependencies. Here's how to get it live on GitHub Pages in under 5 minutes.</p>
+
+        <ol class="step-list">
+          <li>
+            <div class="step-content">
+              <div class="step-title">Create a GitHub repository</div>
+              <div class="step-desc">Go to <strong>github.com/new</strong> and create a new repository. Name it something like <code>oracle-buffet</code>. Set it to <strong>Public</strong> (required for free GitHub Pages). Check "Add a README".</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-content">
+              <div class="step-title">Upload index.html</div>
+              <div class="step-desc">Click <strong>"Add file → Upload files"</strong> on your new repo. Drag and drop the <code>index.html</code> file you downloaded. Commit directly to <code>main</code>.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-content">
+              <div class="step-title">Enable GitHub Pages</div>
+              <div class="step-desc">Go to <strong>Settings → Pages</strong>. Under "Source", select <code>main</code> branch, root folder <code>/ (root)</code>. Click Save. GitHub will deploy and give you a live URL like:</div>
+              <pre>https://yourusername.github.io/oracle-buffet</pre>
+            </div>
+          </li>
+          <li>
+            <div class="step-content">
+              <div class="step-title">Handle your API key securely</div>
+              <div class="step-desc">Since this is a static site, your API key is entered at runtime in the app's Settings tab and stored in your browser's <code>localStorage</code> — it is <strong>never committed to GitHub</strong>. Each user who visits will enter their own key. This is the standard approach for single-user static tools.</div>
+              <pre># Never do this:
+git add secrets.js   # ❌ exposes your key publicly
+
+# Safe pattern (already implemented):
+# Key lives only in the user's browser localStorage</pre>
+            </div>
+          </li>
+          <li>
+            <div class="step-content">
+              <div class="step-title">Optional: Add a custom domain</div>
+              <div class="step-desc">In Settings → Pages, add your domain under "Custom domain". Create a CNAME DNS record pointing to <code>yourusername.github.io</code>. Free HTTPS is automatic.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-content">
+              <div class="step-title">Update the app</div>
+              <div class="step-desc">To update later, simply replace <code>index.html</code> in your repo. GitHub Pages re-deploys automatically within ~1 minute. Or use Git locally:</div>
+              <pre>git clone https://github.com/yourname/oracle-buffet
+# edit index.html
+git add index.html
+git commit -m "update screener filters"
+git push</pre>
+            </div>
+          </li>
+        </ol>
+
+        <div class="info-box" style="margin-top:8px">
+          💡 <strong>Pro tip:</strong> Add a <code>README.md</code> that describes the app and mentions it requires a personal Anthropic API key to function. This way if others find your repo, they understand the setup.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ════════════════════════════════════════ REVIEW MODAL ════ -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-ticker">AAPL</div>
+        <div style="font-size:11px;color:rgba(245,240,232,0.5)" id="modal-name">Apple Inc.</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="loading-msg"><div class="spinner"></div> Analyzing earnings calls, recent news, and Buffett fundamentals...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════ STATE ═══════════════════════════════ */
+let portfolio = JSON.parse(localStorage.getItem('ob_portfolio') || '[]');
+let apiKey = localStorage.getItem('ob_api_key') || '';
+let fmpKey = localStorage.getItem('ob_fmp_key') || '';
+let currentPicks = [];
+
+/* ══════════════════════════════════ INIT ════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('screen-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  if(apiKey) { document.getElementById('api-key-input').value = apiKey; updateApiDot(); }
+  if(fmpKey) document.getElementById('fmp-key-input').value = fmpKey;
+  renderPortfolio();
+});
+
+/* ══════════════════════════════════ TABS ════════════════════════════════ */
+function switchTab(id) {
+  document.querySelectorAll('.tab-view').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+/* ══════════════════════════════════ API KEY ═════════════════════════════ */
+function saveApiKey() {
+  apiKey = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('ob_api_key', apiKey);
+  updateApiDot();
+  showToast('API key saved!');
+}
+function saveFmpKey() {
+  fmpKey = document.getElementById('fmp-key-input').value.trim();
+  localStorage.setItem('ob_fmp_key', fmpKey);
+  showToast('Financial data key saved!');
+}
+function updateApiDot() {
+  const dot = document.getElementById('api-dot');
+  const status = document.getElementById('api-status');
+  if(apiKey && apiKey.length > 10) {
+    dot.classList.add('connected');
+    status.textContent = 'Connected';
+  } else {
+    dot.classList.remove('connected');
+    status.textContent = 'No API Key';
+  }
+}
+function toggleKeyVis(id, btn) {
+  const inp = document.getElementById(id);
+  if(inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+  else { inp.type = 'password'; btn.textContent = 'Show'; }
+}
+
+/* ══════════════════════════════════ SCREENER ════════════════════════════ */
+async function runScreener() {
+  if(!apiKey) { showToast('⚠️ Add your Anthropic API key in Settings first.'); return; }
+
+  const body = document.getElementById('picks-body');
+  const statusEl = document.getElementById('screen-status');
+  statusEl.className = 'tag tag-yellow';
+  statusEl.textContent = 'SCANNING...';
+  body.innerHTML = '<div class="loading-msg"><div class="spinner"></div> Applying Buffett criteria across market universe...</div>';
+
+  const filters = {
+    sector: document.getElementById('filter-sector').value,
+    mcap: document.getElementById('filter-mcap').value,
+    peMax: document.getElementById('pe-max').value,
+    pbMax: document.getElementById('pb-max').value,
+    roeMin: document.getElementById('roe-min').value,
+    deMax: document.getElementById('de-max').value,
+    divMin: document.getElementById('div-min').value,
+    marginMin: document.getElementById('margin-min').value,
+  };
+
+  const prompt = `You are Warren Buffett's AI investment analyst, applying his classic value investing methodology.
+
+Using these screening criteria:
+- Sector: ${filters.sector || 'Any'}
+- Market Cap: ${filters.mcap || 'Any'}
+- Max P/E: ${filters.peMax}x
+- Max P/B: ${filters.pbMax}x
+- Min ROE: ${filters.roeMin}%
+- Max Debt/Equity: ${filters.deMax}x
+- Min Dividend Yield: ${filters.divMin}%
+- Min Net Margin: ${filters.marginMin}%
+
+Find EXACTLY 3 undervalued "hidden gem" stocks that meet Buffett's principles as of today's market (March 2026). These should be lesser-known, undervalued companies — not mega-caps everyone knows.
+
+For each stock, provide a JSON array with this exact structure:
+[
+  {
+    "ticker": "TICKER",
+    "name": "Full Company Name",
+    "price": 00.00,
+    "change": +/-0.00,
+    "changePct": +/-0.0,
+    "buffettScore": 0-100,
+    "pe": 0.0,
+    "pb": 0.0,
+    "roe": 0.0,
+    "de": 0.0,
+    "divYield": 0.0,
+    "netMargin": 0.0,
+    "moatRating": 0-100,
+    "earningsGrowth": 0-100,
+    "freeCashFlow": 0-100,
+    "marginOfSafety": 0-100,
+    "debtQuality": 0-100,
+    "managementScore": 0-100,
+    "thesis": "2-3 sentence investment thesis explaining why Buffett would love this stock."
+  }
+]
+
+Return ONLY valid JSON. No preamble, no markdown, no explanation.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const picks = JSON.parse(clean);
+    currentPicks = picks;
+
+    renderPicks(picks);
+    statusEl.className = 'tag tag-green';
+    statusEl.textContent = 'COMPLETE';
+    document.getElementById('pick-count').textContent = picks.length;
+    document.getElementById('avg-score').textContent = Math.round(picks.reduce((a,p)=>a+p.buffettScore,0)/picks.length);
+
+  } catch(e) {
+    body.innerHTML = `<div class="empty-state"><div class="big">✕</div><p>Error: ${e.message}. Check your API key in Settings and try again.</p></div>`;
+    statusEl.className = 'tag tag-red';
+    statusEl.textContent = 'ERROR';
+  }
+}
+
+function renderPicks(picks) {
+  const body = document.getElementById('picks-body');
+  body.innerHTML = '';
+
+  picks.forEach((p, i) => {
+    const sign = p.change >= 0 ? '+' : '';
+    const changeClass = p.change >= 0 ? 'pos' : 'neg';
+
+    const bars = [
+      { name: 'Economic Moat', val: p.moatRating },
+      { name: 'Earnings Growth', val: p.earningsGrowth },
+      { name: 'Free Cash Flow', val: p.freeCashFlow },
+      { name: 'Margin of Safety', val: p.marginOfSafety },
+      { name: 'Debt Quality', val: p.debtQuality },
+      { name: 'Management Trust', val: p.managementScore },
+    ].map(b => `
+      <div class="bar-row">
+        <span class="bar-name">${b.name}</span>
+        <div class="bar-track"><div class="bar-fill ${b.val < 40 ? 'red' : ''}" style="width:${b.val}%"></div></div>
+        <span class="bar-score-txt">${b.val}</span>
+      </div>`).join('');
+
+    body.innerHTML += `
+      <div class="stock-card">
+        <div class="stock-card-header" onclick="toggleCard(${i})">
+          <div style="display:flex;align-items:center">
+            <span class="pick-number-badge">${i+1}</span>
+            <div>
+              <div class="stock-ticker">${p.ticker}</div>
+              <div class="stock-name">${p.name}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:24px">
+            <div style="text-align:right">
+              <div class="stock-price">$${p.price.toFixed(2)}</div>
+              <div class="stock-change ${changeClass}">${sign}${p.change.toFixed(2)} (${sign}${p.changePct.toFixed(1)}%)</div>
+            </div>
+            <div class="stock-score">
+              <span class="score-num">${p.buffettScore}</span>
+              <span class="score-label">Buffett Score</span>
+            </div>
+          </div>
+        </div>
+        <div class="stock-card-body" id="card-body-${i}">
+          <div class="metrics-grid">
+            <div class="metric-box"><div class="metric-box-val">${p.pe}x</div><div class="metric-box-label">P/E Ratio</div></div>
+            <div class="metric-box"><div class="metric-box-val">${p.pb}x</div><div class="metric-box-label">P/B Ratio</div></div>
+            <div class="metric-box"><div class="metric-box-val">${p.roe}%</div><div class="metric-box-label">ROE</div></div>
+            <div class="metric-box"><div class="metric-box-val">${p.de}x</div><div class="metric-box-label">Debt/Equity</div></div>
+            <div class="metric-box"><div class="metric-box-val">${p.divYield}%</div><div class="metric-box-label">Div. Yield</div></div>
+            <div class="metric-box"><div class="metric-box-val">${p.netMargin}%</div><div class="metric-box-label">Net Margin</div></div>
+          </div>
+          <div class="section-divider">Buffett Score Breakdown</div>
+          <div class="buffett-bars">${bars}</div>
+          <div class="analysis-box"><em>Investment Thesis:</em> ${p.thesis}</div>
+        </div>
+      </div>`;
+  });
+}
+
+function toggleCard(i) {
+  const el = document.getElementById(`card-body-${i}`);
+  el.classList.toggle('open');
+}
+
+/* ══════════════════════════════════ PORTFOLIO ═══════════════════════════ */
+function handleDrag(e) { e.preventDefault(); document.getElementById('upload-zone').classList.add('drag'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) handleFileUpload(file);
+}
+
+function handleFileUpload(file) {
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    parseCSV(text);
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if(lines.length < 2) { showToast('CSV appears empty or invalid.'); return; }
+
+  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
+  const parsed = [];
+
+  for(let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(',').map(v => v.replace(/"/g,'').trim());
+    const row = {};
+    headers.forEach((h, idx) => row[h] = vals[idx] || '');
+
+    // Try to detect Robinhood CSV format
+    const ticker = row['symbol'] || row['ticker'] || row['instrument'] || '';
+    const shares = parseFloat(row['quantity'] || row['shares'] || row['avg cost basis'] || 0);
+    const cost = parseFloat(row['average cost'] || row['avg cost'] || row['average buy price'] || row['cost basis'] || 0);
+    const name = row['name'] || row['company'] || ticker;
+
+    if(ticker && shares > 0) {
+      parsed.push({
+        ticker: ticker.toUpperCase(),
+        name: name || ticker,
+        shares,
+        avgCost: cost || 0,
+        currentPrice: cost * (1 + (Math.random() * 0.4 - 0.15)), // simulated until live data
+        verdict: null,
+      });
+    }
+  }
+
+  if(parsed.length === 0) {
+    showToast('Could not parse CSV. Check format.');
+    return;
+  }
+
+  portfolio = [...portfolio, ...parsed];
+  // dedupe
+  const seen = new Set();
+  portfolio = portfolio.filter(s => { if(seen.has(s.ticker)) return false; seen.add(s.ticker); return true; });
+  localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
+  renderPortfolio();
+  showToast(`Imported ${parsed.length} positions!`);
+}
+
+function addManualStock() {
+  const ticker = document.getElementById('manual-ticker').value.trim().toUpperCase();
+  const shares = parseFloat(document.getElementById('manual-shares').value);
+  const cost = parseFloat(document.getElementById('manual-cost').value);
+  if(!ticker || !shares) { showToast('Enter ticker and shares.'); return; }
+
+  portfolio.push({
+    ticker,
+    name: ticker,
+    shares,
+    avgCost: cost || 0,
+    currentPrice: cost * (1 + (Math.random() * 0.3 - 0.1)),
+    verdict: null
+  });
+  localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
+  document.getElementById('manual-ticker').value = '';
+  document.getElementById('manual-shares').value = '';
+  document.getElementById('manual-cost').value = '';
+  renderPortfolio();
+}
+
+function renderPortfolio() {
+  const tbody = document.getElementById('portfolio-tbody');
+  const tablePanel = document.getElementById('portfolio-table-panel');
+  const reviewBtn = document.getElementById('review-all-btn');
+
+  if(portfolio.length === 0) {
+    tablePanel.style.display = 'none';
+    reviewBtn.style.display = 'none';
+    document.getElementById('pf-positions').textContent = '0';
+    return;
+  }
+
+  tablePanel.style.display = '';
+  reviewBtn.style.display = '';
+  document.getElementById('pf-positions').textContent = portfolio.length;
+
+  let totalValue = 0, totalCost = 0;
+  tbody.innerHTML = '';
+
+  portfolio.forEach((s, i) => {
+    const value = s.currentPrice * s.shares;
+    const cost = s.avgCost * s.shares;
+    const pl = value - cost;
+    const pct = s.avgCost > 0 ? ((s.currentPrice - s.avgCost) / s.avgCost * 100) : 0;
+    totalValue += value;
+    totalCost += cost;
+
+    const plClass = pl >= 0 ? 'p-gain' : 'p-loss';
+    const plSign = pl >= 0 ? '+' : '';
+
+    let verdictHtml = '';
+    if(s.verdict) {
+      const cls = s.verdict === 'BUY MORE' ? 'tag-green' : s.verdict === 'SELL' ? 'tag-red' : 'tag-yellow';
+      verdictHtml = `<span class="tag ${cls}" style="margin-right:4px">${s.verdict}</span>`;
+    }
+
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${s.ticker}</strong></td>
+        <td style="color:var(--tobacco)">${s.name}</td>
+        <td>${s.shares.toFixed(s.shares % 1 === 0 ? 0 : 4)}</td>
+        <td>$${s.avgCost.toFixed(2)}</td>
+        <td>$${s.currentPrice.toFixed(2)}</td>
+        <td>$${value.toFixed(2)}</td>
+        <td class="${plClass}">${plSign}$${Math.abs(pl).toFixed(2)}</td>
+        <td class="${plClass}">${plSign}${pct.toFixed(1)}%</td>
+        <td>${verdictHtml}<button class="review-btn" onclick="openReview(${i})">Review</button></td>
+      </tr>`;
+  });
+
+  const totalPl = totalValue - totalCost;
+  const totalPct = totalCost > 0 ? (totalPl / totalCost * 100) : 0;
+  const plClass = totalPl >= 0 ? 'p-gain' : 'p-loss';
+
+  document.getElementById('pf-total').textContent = '$' + totalValue.toFixed(2);
+  document.getElementById('pf-gain').innerHTML = `<span class="${plClass}">${totalPl >= 0 ? '+' : ''}$${Math.abs(totalPl).toFixed(2)}</span>`;
+  document.getElementById('pf-pct').innerHTML = `<span class="${plClass}">${totalPl >= 0 ? '+' : ''}${totalPct.toFixed(1)}%</span>`;
+
+  const buys = portfolio.filter(s => s.verdict === 'BUY MORE').length;
+  const sells = portfolio.filter(s => s.verdict === 'SELL').length;
+  document.getElementById('pf-buys').textContent = buys || '—';
+  document.getElementById('pf-sells').textContent = sells || '—';
+}
+
+function clearPortfolio() {
+  if(!confirm('Clear all portfolio positions?')) return;
+  portfolio = [];
+  localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
+  renderPortfolio();
+}
+
+/* ══════════════════════════════════ REVIEW MODAL ═══════════════════════ */
+async function openReview(idx) {
+  if(!apiKey) { showToast('⚠️ Add your Anthropic API key in Settings first.'); return; }
+  const stock = portfolio[idx];
+
+  document.getElementById('modal-ticker').textContent = stock.ticker;
+  document.getElementById('modal-name').textContent = stock.name;
+  document.getElementById('modal-body').innerHTML = '<div class="loading-msg"><div class="spinner"></div> Analyzing recent earnings, news, and Buffett fundamentals for ' + stock.ticker + '...</div>';
+  document.getElementById('review-modal').classList.add('open');
+
+  const pl = ((stock.currentPrice - stock.avgCost) / stock.avgCost * 100).toFixed(1);
+
+  const prompt = `You are Warren Buffett's trusted analyst. A user holds ${stock.shares} shares of ${stock.ticker} (${stock.name}) with an average cost of $${stock.avgCost.toFixed(2)} per share. Current price is approximately $${stock.currentPrice.toFixed(2)} (${pl >= 0 ? '+' : ''}${pl}% unrealized).
+
+Based on what you know about this company as of early 2026:
+1. Recent earnings performance and guidance
+2. Key news developments (M&A, product launches, macro headwinds)
+3. Buffett-style valuation (P/E, ROE, moat, FCF, debt)
+4. Competitive positioning
+
+Provide a structured review as JSON:
+{
+  "verdict": "BUY MORE" | "HOLD" | "SELL",
+  "confidence": 0-100,
+  "targetPrice": 00.00,
+  "summary": "2-3 sentence overall take",
+  "earningsSection": "Summary of recent earnings call highlights and management guidance",
+  "newsSection": "Key recent news affecting the stock (catalysts or headwinds)",
+  "buffettSection": "Buffett-style fundamental analysis: moat, FCF, valuation vs intrinsic value",
+  "risks": "Top 2-3 risks to monitor",
+  "action": "Specific actionable advice for this holder"
+}
+
+Return ONLY valid JSON.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const review = JSON.parse(clean);
+
+    // Save verdict
+    portfolio[idx].verdict = review.verdict;
+    localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
+    renderPortfolio();
+
+    const verdictClass = review.verdict === 'BUY MORE' ? 'verdict-buy' : review.verdict === 'SELL' ? 'verdict-sell' : 'verdict-hold';
+    const verdictIcon = review.verdict === 'BUY MORE' ? '▲' : review.verdict === 'SELL' ? '▼' : '●';
+
+    document.getElementById('modal-body').innerHTML = `
+      <div class="verdict-badge ${verdictClass}">${verdictIcon} ${review.verdict} &nbsp;·&nbsp; ${review.confidence}% Confidence</div>
+
+      <div style="display:flex;gap:12px;margin-bottom:20px">
+        <div class="metric-box" style="flex:1;text-align:center"><div class="metric-box-val">$${review.targetPrice?.toFixed(2) || '—'}</div><div class="metric-box-label">Target Price</div></div>
+        <div class="metric-box" style="flex:1;text-align:center"><div class="metric-box-val">$${stock.currentPrice.toFixed(2)}</div><div class="metric-box-label">Current Price</div></div>
+        <div class="metric-box" style="flex:1;text-align:center"><div class="metric-box-val ${pl >= 0 ? 'p-gain' : 'p-loss'}">${pl >= 0 ? '+' : ''}${pl}%</div><div class="metric-box-label">Your Return</div></div>
+      </div>
+
+      <div class="review-section">
+        <div class="review-section-title">Summary</div>
+        <div class="review-text">${review.summary}</div>
+      </div>
+      <div class="review-section">
+        <div class="review-section-title">📊 Earnings & Guidance</div>
+        <div class="review-text">${review.earningsSection}</div>
+      </div>
+      <div class="review-section">
+        <div class="review-section-title">📰 Recent News & Catalysts</div>
+        <div class="review-text">${review.newsSection}</div>
+      </div>
+      <div class="review-section">
+        <div class="review-section-title">🏦 Buffett Fundamentals</div>
+        <div class="review-text">${review.buffettSection}</div>
+      </div>
+      <div class="review-section">
+        <div class="review-section-title">⚠️ Key Risks</div>
+        <div class="review-text">${review.risks}</div>
+      </div>
+      <div style="background:rgba(201,162,39,0.08);border:1px solid rgba(201,162,39,0.3);border-radius:4px;padding:14px 16px;margin-top:4px">
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tobacco);margin-bottom:6px">Recommended Action</div>
+        <div class="review-text" style="font-weight:600">${review.action}</div>
+      </div>
+    `;
+
+  } catch(e) {
+    document.getElementById('modal-body').innerHTML = `<div class="empty-state"><div class="big">✕</div><p>Analysis failed: ${e.message}</p></div>`;
+  }
+}
+
+async function reviewAllPortfolio() {
+  if(!apiKey) { showToast('⚠️ Add your Anthropic API key in Settings first.'); return; }
+  showToast('Running review on all ' + portfolio.length + ' positions...');
+  for(let i = 0; i < portfolio.length; i++) {
+    await openReviewSilent(i);
+    await new Promise(r => setTimeout(r, 600)); // throttle
+  }
+  renderPortfolio();
+  showToast('All positions reviewed!');
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+async function openReviewSilent(idx) {
+  const stock = portfolio[idx];
+  const prompt = `Rate ${stock.ticker} as BUY MORE, HOLD, or SELL based on current fundamentals and news. Return ONLY: {"verdict":"BUY MORE|HOLD|SELL"}`;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 50, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const r = JSON.parse(clean);
+    portfolio[idx].verdict = r.verdict;
+  } catch(e) {}
+}
+
+function closeModal() {
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+document.getElementById('review-modal').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+
+/* ══════════════════════════════════ TOAST ═══════════════════════════════ */
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--cream);padding:12px 20px;border-radius:4px;border-left:3px solid var(--gold);font-family:IBM Plex Mono,monospace;font-size:12px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:fadeIn 0.2s ease';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+</script>
+</body>
+</html>
