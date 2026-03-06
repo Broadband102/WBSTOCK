@@ -1630,6 +1630,7 @@ async function refreshPortfolioPrices() {
 }
 
 
+function clearPortfolio() {
   if(!confirm('Clear all portfolio positions?')) return;
   portfolio = [];
   localStorage.setItem('ob_portfolio', JSON.stringify(portfolio));
