@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oracle Buffet — Growth Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --parchment: #ede5d0;
+    --ink: #1a1208;
+    --tobacco: #8b5e3c;
+    --gold: #c9a227;
+    --gold-light: #e8c84a;
+    --forest: #2d4a22;
+    --forest-light: #3d6b30;
+    --red: #8b1a1a;
+    --border: #c4b08a;
+    --shadow: rgba(26,18,8,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(196,176,138,0.12) 28px, rgba(196,176,138,0.12) 29px),
+      repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(196,176,138,0.06) 28px, rgba(196,176,138,0.06) 29px);
+  }
+
+  header {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 0 32px;
+    border-bottom: 3px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--gold);
+  }
+  .logo span { font-size: 11px; color: rgba(245,240,232,0.4); font-family: 'IBM Plex Mono', monospace; font-weight: 300; letter-spacing: .15em; margin-left: 10px; }
+  .back-link { font-size: 10px; color: rgba(245,240,232,0.5); letter-spacing: .12em; text-decoration: none; text-transform: uppercase; border: 1px solid rgba(245,240,232,0.2); padding: 6px 14px; border-radius: 2px; transition: all .2s; }
+  .back-link:hover { color: var(--gold); border-color: var(--gold); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ── INPUTS ── */
+  .top-grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 2px 3px 12px var(--shadow);
+    overflow: hidden;
+  }
+  .panel-hd {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 11px 18px;
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: .05em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-hd-sub { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: rgba(245,240,232,.4); letter-spacing: .12em; text-transform: uppercase; font-weight: 300; }
+  .panel-bd { padding: 18px; }
+
+  label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--tobacco);
+    margin-bottom: 5px;
+    margin-top: 14px;
+  }
+  label:first-of-type { margin-top: 0; }
+
+  .inp {
+    width: 100%;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 9px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color .2s;
+  }
+  .inp:focus { border-color: var(--gold); }
+  .inp-prefix { position: relative; }
+  .inp-prefix::before { content: '$'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--tobacco); font-size: 12px; pointer-events: none; }
+  .inp-prefix .inp { padding-left: 22px; }
+
+  .inp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .disclaimer {
+    font-size: 9px;
+    color: var(--tobacco);
+    line-height: 1.6;
+    margin-top: 14px;
+    padding: 10px;
+    background: var(--parchment);
+    border-radius: 3px;
+    border-left: 3px solid var(--gold);
+  }
+
+  /* ── SCENARIO TOGGLES ── */
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .scenario-btn {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all .2s;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .scenario-btn:hover { border-color: var(--gold); }
+  .scenario-btn.active { background: var(--ink); border-color: var(--gold); }
+  .scenario-btn .s-name { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--tobacco); }
+  .scenario-btn.active .s-name { color: rgba(245,240,232,.5); }
+  .scenario-btn .s-rate { font-size: 16px; font-weight: 500; color: var(--ink); margin: 3px 0 1px; }
+  .scenario-btn.active .s-rate { color: var(--gold); }
+  .scenario-btn .s-desc { font-size: 8px; color: var(--tobacco); letter-spacing: .05em; }
+  .scenario-btn.active .s-desc { color: rgba(245,240,232,.4); }
+  .scenario-btn .s-dot { width: 6px; height: 6px; border-radius: 50%; margin: 4px auto 0; }
+
+  /* ── SUMMARY CARDS ── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .sum-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 1px 2px 8px var(--shadow);
+    transition: transform .2s;
+  }
+  .sum-card:hover { transform: translateY(-2px); }
+  .sum-val { font-size: 22px; font-weight: 500; color: var(--ink); font-family: 'Playfair Display', serif; }
+  .sum-val.green { color: var(--forest); }
+  .sum-val.gold { color: var(--gold); }
+  .sum-label { font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: var(--tobacco); margin-top: 4px; }
+  .sum-sub { font-size: 10px; color: var(--tobacco); margin-top: 2px; }
+
+  /* ── CHART ── */
+  .chart-wrap {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 2px 3px 12px var(--shadow);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .chart-hd {
+    background: var(--ink);
+    padding: 11px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .chart-title { font-family: 'Playfair Display', serif; font-size: 13px; color: var(--gold); font-weight: 700; }
+  .chart-legend { display: flex; gap: 14px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 9px; color: rgba(245,240,232,.6); letter-spacing: .08em; text-transform: uppercase; }
+  .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+  canvas { display: block; width: 100%; }
+
+  /* ── YEAR TABLE ── */
+  .year-table {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 2px 3px 12px var(--shadow);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr { background: var(--ink); }
+  th { padding: 9px 14px; text-align: right; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: rgba(245,240,232,.6); font-weight: 400; }
+  th:first-child { text-align: left; color: var(--gold); }
+  td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--parchment); }
+  td:first-child { text-align: left; font-weight: 500; }
+  tr:hover td { background: var(--cream); }
+  tr:last-child td { border-bottom: none; }
+  .highlight-row td { background: rgba(201,162,39,.06) !important; font-weight: 600; }
+  .gain { color: var(--forest); }
+  .loss { color: var(--red); }
+
+  /* ── MCMUFFIN METER ── */
+  .mcmuffin-bar {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 18px;
+    box-shadow: 2px 3px 12px var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .mcm-icon { font-size: 28px; flex-shrink: 0; }
+  .mcm-text { flex: 1; }
+  .mcm-title { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .mcm-desc { font-size: 10px; color: var(--tobacco); line-height: 1.6; }
+  .mcm-vs {
+    display: flex;
+    gap: 20px;
+  }
+  .mcm-num { text-align: center; }
+  .mcm-num .v { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; }
+  .mcm-num .l { font-size: 9px; color: var(--tobacco); text-transform: uppercase; letter-spacing: .1em; margin-top: 2px; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+  .tag-green { background: rgba(45,74,34,.1); color: var(--forest); }
+  .tag-gold { background: rgba(201,162,39,.15); color: #7a5e00; }
+  .tag-red { background: rgba(139,26,26,.1); color: var(--red); }
+
+  .age-marker {
+    font-size: 10px;
+    color: var(--tobacco);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .age-marker::before { content: ''; display: inline-block; width: 12px; height: 2px; background: var(--gold); }
+
+  /* animate numbers */
+  .counting { transition: all .4s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up { animation: fadeUp .4s ease forwards; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <span class="logo">⊕ Oracle Buffet <span>Growth Calculator</span></span>
+  </div>
+  <a href="index.html" class="back-link">← Back to Screener</a>
+</header>
+
+<main>
+
+  <!-- TOP GRID: Inputs + Scenarios -->
+  <div class="top-grid">
+
+    <!-- INPUTS -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span>Your Numbers</span>
+        <span class="panel-hd-sub">Edit any field</span>
+      </div>
+      <div class="panel-bd">
+
+        <label>Current Portfolio Value</label>
+        <div class="inp-prefix">
+          <input class="inp" id="portfolio-val" type="number" value="0" min="0" oninput="recalc()">
+        </div>
+
+        <label>Weekly Investment</label>
+        <div class="inp-prefix">
+          <input class="inp" id="weekly-inv" type="number" value="40" min="1" oninput="recalc()">
+        </div>
+
+        <div class="inp-row">
+          <div>
+            <label>Your Age</label>
+            <input class="inp" id="current-age" type="number" value="41" min="18" max="80" oninput="recalc()">
+          </div>
+          <div>
+            <label>Target Age</label>
+            <input class="inp" id="target-age" type="number" value="65" min="20" max="90" oninput="recalc()">
+          </div>
+        </div>
+
+        <label>Custom Return Rate (optional)</label>
+        <div style="position:relative">
+          <input class="inp" id="custom-rate" type="number" value="" min="0" max="50" step="0.1" placeholder="e.g. 11.5" oninput="recalc()" style="padding-right:30px">
+          <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--tobacco);font-size:12px">%</span>
+        </div>
+
+        <div class="disclaimer">
+          ⚠️ Historic averages are not a guarantee of future returns. The S&P 500 has averaged ~10.5%/yr since 1957 but individual years range from -38% to +38%. This is a projection tool, not financial advice.
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENARIOS -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span>Return Scenarios</span>
+        <span class="panel-hd-sub">Based on historic data</span>
+      </div>
+      <div class="panel-bd">
+        <div class="scenario-grid" id="scenario-grid">
+          <!-- rendered by JS -->
+        </div>
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px" id="scenario-detail">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-row" id="summary-row">
+    <div class="sum-card">
+      <div class="sum-val gold" id="s-final">—</div>
+      <div class="sum-label">Final Value</div>
+      <div class="sum-sub" id="s-final-sub">at target age</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val green" id="s-gain">—</div>
+      <div class="sum-label">Total Gain</div>
+      <div class="sum-sub" id="s-gain-sub">interest + growth</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val" id="s-contributed">—</div>
+      <div class="sum-label">Total Contributed</div>
+      <div class="sum-sub" id="s-contributed-sub">your actual dollars</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val" id="s-multiplier">—</div>
+      <div class="sum-label">Money Multiplier</div>
+      <div class="sum-sub">every $1 becomes</div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-wrap">
+    <div class="chart-hd">
+      <span class="chart-title">Portfolio Growth Over Time</span>
+      <div class="chart-legend" id="chart-legend"></div>
+    </div>
+    <canvas id="growth-chart" height="320"></canvas>
+  </div>
+
+  <!-- YEAR TABLE -->
+  <div class="year-table">
+    <div class="panel-hd">
+      <span>Year-by-Year Projection</span>
+      <span class="panel-hd-sub">All scenarios side by side</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="year-table">
+        <thead><tr id="table-head"></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MCMUFFIN METER -->
+  <div class="mcmuffin-bar" id="mcmuffin-bar">
+    <div class="mcm-icon">🥐</div>
+    <div class="mcm-text">
+      <div class="mcm-title">The McMuffin Opportunity Cost</div>
+      <div class="mcm-desc" id="mcm-desc">Loading...</div>
+    </div>
+    <div class="mcm-vs" id="mcm-vs"></div>
+  </div>
+
+</main>
+
+<script>
+/* ══════════════════════ SCENARIOS ══════════════════════════════════════ */
+const SCENARIOS = [
+  {
+    id: 'bear',
+    name: 'Bear Market',
+    rate: 0.04,
+    display: '4%',
+    desc: 'Bonds / poor decade',
+    color: '#8b1a1a',
+    detail: 'Reflects periods like 2000-2009 ("lost decade") where equities averaged ~1% and diversified portfolios around 4%. Possible if inflation stays high.',
+    historical: 'Worst 20yr S&P rolling avg: 6.4% (1929–1948)'
+  },
+  {
+    id: 'sp500',
+    name: 'S&P 500',
+    rate: 0.105,
+    display: '10.5%',
+    desc: 'Index fund avg',
+    color: '#2d6b8a',
+    detail: 'The S&P 500 long-run average since 1957. Achievable via a simple VOO or SPY index fund with zero stock picking required.',
+    historical: 'S&P 500 annualized 1957–2024: ~10.5%'
+  },
+  {
+    id: 'value',
+    name: 'Value',
+    rate: 0.13,
+    display: '13%',
+    desc: 'Buffett-style picks',
+    color: '#2d4a22',
+    detail: 'Berkshire Hathaway has compounded at ~19.8%/yr since 1965. Value investors historically beat the index by 2-4% annually. 13% is a conservative estimate.',
+    historical: 'Fama-French value factor premium: +3-4%/yr over index'
+  },
+  {
+    id: 'aggressive',
+    name: 'Aggressive',
+    rate: 0.18,
+    display: '18%',
+    desc: 'Growth/concentrated',
+    color: '#c9a227',
+    detail: 'Achievable but unlikely to sustain. Concentrated positions or small-cap growth in bull markets. High variance — same strategy produces -30% in bad years.',
+    historical: 'Berkshire 1965–1985 (early years): ~23%/yr'
+  },
+  {
+    id: 'custom',
+    name: 'Custom',
+    rate: null,
+    display: '—',
+    desc: 'Your rate',
+    color: '#8b5e3c',
+    detail: 'Enter your own expected rate of return in the input on the left.',
+    historical: 'Set your own assumption'
+  },
+];
+
+let activeScenario = 'sp500';
+let chartInstance = null;
+
+/* ══════════════════════ HELPERS ════════════════════════════════════════ */
+const fmt = (n) => '$' + Math.round(n).toLocaleString();
+const fmtK = (n) => n >= 1e6 ? '$' + (n/1e6).toFixed(2) + 'M' : n >= 1e3 ? '$' + (n/1e3).toFixed(0) + 'K' : '$' + Math.round(n).toLocaleString();
+
+function calcFV(startVal, weeklyAmt, rate, years) {
+  // Compound existing portfolio + weekly DCA contributions
+  const weeklyRate = rate / 52;
+  const weeks = years * 52;
+  // Future value of lump sum
+  const fvLump = startVal * Math.pow(1 + rate, years);
+  // Future value of weekly annuity
+  const fvDCA = weeklyAmt > 0
+    ? weeklyAmt * ((Math.pow(1 + weeklyRate, weeks) - 1) / weeklyRate)
+    : 0;
+  return fvLump + fvDCA;
+}
+
+function getInputs() {
+  const portfolioVal = parseFloat(document.getElementById('portfolio-val').value) || 0;
+  const weeklyInv    = parseFloat(document.getElementById('weekly-inv').value) || 40;
+  const currentAge   = parseInt(document.getElementById('current-age').value) || 41;
+  const targetAge    = parseInt(document.getElementById('target-age').value) || 65;
+  const customRate   = parseFloat(document.getElementById('custom-rate').value);
+  const years        = Math.max(1, targetAge - currentAge);
+  return { portfolioVal, weeklyInv, currentAge, targetAge, years, customRate };
+}
+
+function getActiveRate() {
+  const { customRate } = getInputs();
+  if (activeScenario === 'custom') {
+    return isNaN(customRate) ? 0.105 : customRate / 100;
+  }
+  return SCENARIOS.find(s => s.id === activeScenario).rate;
+}
+
+/* ══════════════════════ RENDER SCENARIOS ═══════════════════════════════ */
+function renderScenarios() {
+  const { customRate } = getInputs();
+  const grid = document.getElementById('scenario-grid');
+  grid.innerHTML = '';
+  SCENARIOS.forEach(s => {
+    const display = s.id === 'custom'
+      ? (isNaN(customRate) || customRate === '' ? '—%' : customRate + '%')
+      : s.display;
+    const div = document.createElement('div');
+    div.className = 'scenario-btn' + (s.id === activeScenario ? ' active' : '');
+    div.innerHTML = `
+      <div class="s-name">${s.name}</div>
+      <div class="s-rate">${display}</div>
+      <div class="s-desc">${s.desc}</div>
+      <div class="s-dot" style="background:${s.color}"></div>`;
+    div.onclick = () => { activeScenario = s.id; renderScenarios(); recalc(); };
+    grid.appendChild(div);
+  });
+
+  // Detail box
+  const sc = SCENARIOS.find(s => s.id === activeScenario);
+  document.getElementById('scenario-detail').innerHTML = `
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:3px;padding:12px;border-left:3px solid ${sc.color}">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--tobacco);margin-bottom:5px">About this scenario</div>
+      <div style="font-size:11px;line-height:1.7;color:var(--ink)">${sc.detail}</div>
+    </div>
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:3px;padding:12px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--tobacco);margin-bottom:5px">Historical reference</div>
+      <div style="font-size:11px;line-height:1.7;font-style:italic;color:var(--tobacco)">${sc.historical}</div>
+    </div>`;
+}
+
+/* ══════════════════════ MAIN RECALC ════════════════════════════════════ */
+function recalc() {
+  renderScenarios();
+  const { portfolioVal, weeklyInv, currentAge, targetAge, years } = getInputs();
+  const rate = getActiveRate();
+  const totalContributed = portfolioVal + (weeklyInv * 52 * years);
+
+  // Final value
+  const finalVal = calcFV(portfolioVal, weeklyInv, rate, years);
+  const gain = finalVal - totalContributed;
+  const multiplier = totalContributed > 0 ? (finalVal / totalContributed) : 0;
+
+  // Summary cards
+  document.getElementById('s-final').textContent = fmtK(finalVal);
+  document.getElementById('s-final-sub').textContent = `at age ${targetAge}`;
+  document.getElementById('s-gain').textContent = fmtK(gain);
+  document.getElementById('s-gain-sub').textContent = `${Math.round((gain/totalContributed)*100)}% on contributions`;
+  document.getElementById('s-contributed').textContent = fmtK(totalContributed);
+  document.getElementById('s-contributed-sub').textContent = `over ${years} years`;
+  document.getElementById('s-multiplier').textContent = multiplier > 0 ? multiplier.toFixed(2) + 'x' : '—';
+
+  renderChart(portfolioVal, weeklyInv, currentAge, years);
+  renderTable(portfolioVal, weeklyInv, currentAge, years);
+  renderMcMuffin(weeklyInv, years, finalVal, rate);
+}
+
+/* ══════════════════════ CHART ══════════════════════════════════════════ */
+function renderChart(startVal, weekly, startAge, years) {
+  const canvas = document.getElementById('growth-chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth;
+  const H = 320;
+  canvas.width = W;
+  canvas.height = H;
+
+  const PAD = { top: 20, right: 20, bottom: 40, left: 70 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Build data for all non-custom scenarios + current custom if set
+  const { customRate } = getInputs();
+  const scenariosToShow = SCENARIOS
+    .filter(s => s.id !== 'custom' || (!isNaN(customRate) && customRate !== ''))
+    .map(s => ({
+      ...s,
+      rate: s.id === 'custom' ? customRate / 100 : s.rate,
+      display: s.id === 'custom' ? customRate + '%' : s.display
+    }));
+
+  // Data points: every year
+  const dataByScenario = scenariosToShow.map(s => {
+    const pts = [];
+    for (let y = 0; y <= years; y++) {
+      pts.push(calcFV(startVal, weekly, s.rate, y));
+    }
+    return { ...s, pts };
+  });
+
+  // Contributed line
+  const contribPts = [];
+  for (let y = 0; y <= years; y++) {
+    contribPts.push(startVal + weekly * 52 * y);
+  }
+
+  // Max value for scaling
+  const allVals = [...dataByScenario.flatMap(d => d.pts), ...contribPts];
+  const maxVal = Math.max(...allVals) * 1.05;
+
+  const xOf = (y) => PAD.left + (y / years) * chartW;
+  const yOf = (v) => PAD.top + chartH - (v / maxVal) * chartH;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(196,176,138,0.3)';
+  ctx.lineWidth = 1;
+  const gridLines = 5;
+  for (let i = 0; i <= gridLines; i++) {
+    const v = (maxVal / gridLines) * i;
+    const y = yOf(v);
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(PAD.left + chartW, y);
+    ctx.stroke();
+    // Label
+    ctx.fillStyle = '#8b5e3c';
+    ctx.font = '9px IBM Plex Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(fmtK(v), PAD.left - 6, y + 3);
+  }
+
+  // X axis labels (age)
+  const step = years <= 10 ? 1 : years <= 20 ? 2 : 5;
+  for (let y = 0; y <= years; y += step) {
+    const x = xOf(y);
+    ctx.fillStyle = '#8b5e3c';
+    ctx.font = '9px IBM Plex Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(startAge + y, x, H - PAD.bottom + 16);
+  }
+
+  // Contributed line (dashed)
+  ctx.strokeStyle = 'rgba(139,94,60,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  contribPts.forEach((v, i) => {
+    i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v));
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Scenario lines
+  dataByScenario.forEach(s => {
+    const isActive = s.id === activeScenario || (s.id === 'custom' && activeScenario === 'custom');
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = isActive ? 3 : 1.5;
+    ctx.globalAlpha = isActive ? 1 : 0.35;
+    ctx.beginPath();
+    s.pts.forEach((v, i) => {
+      i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v));
+    });
+    ctx.stroke();
+
+    // Fill under active scenario
+    if (isActive) {
+      ctx.globalAlpha = 0.07;
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      s.pts.forEach((v, i) => {
+        i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v));
+      });
+      ctx.lineTo(xOf(years), yOf(0));
+      ctx.lineTo(xOf(0), yOf(0));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+
+    // End label
+    if (isActive) {
+      const endX = xOf(years);
+      const endY = yOf(s.pts[years]);
+      ctx.fillStyle = s.color;
+      ctx.font = 'bold 10px IBM Plex Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText(fmtK(s.pts[years]), Math.min(endX + 4, W - 60), endY - 4);
+    }
+  });
+
+  // X axis line
+  ctx.strokeStyle = 'rgba(196,176,138,0.6)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, PAD.top + chartH);
+  ctx.lineTo(PAD.left + chartW, PAD.top + chartH);
+  ctx.stroke();
+
+  // Legend
+  const legend = document.getElementById('chart-legend');
+  legend.innerHTML = dataByScenario.map(s =>
+    `<div class="leg-item"><div class="leg-dot" style="background:${s.color}"></div>${s.name} ${s.display}</div>`
+  ).join('') + `<div class="leg-item"><div class="leg-dot" style="background:rgba(139,94,60,.4);"></div>Contributions</div>`;
+}
+
+/* ══════════════════════ YEAR TABLE ═════════════════════════════════════ */
+function renderTable(startVal, weekly, startAge, years) {
+  const { customRate } = getInputs();
+  const scenariosToShow = SCENARIOS.filter(s =>
+    s.id !== 'custom' || (!isNaN(customRate) && customRate !== '')
+  ).map(s => ({
+    ...s,
+    rate: s.id === 'custom' ? customRate / 100 : s.rate
+  }));
+
+  // Header
+  document.getElementById('table-head').innerHTML =
+    `<th>Age / Year</th><th>Contributed</th>` +
+    scenariosToShow.map(s => `<th style="color:${s.color}">${s.name}<br><span style="font-weight:300">${s.id === 'custom' ? customRate + '%' : s.display}</span></th>`).join('');
+
+  // Rows — show every year up to 10, then every 5
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  const rowYears = [];
+  for (let y = 1; y <= years; y++) {
+    if (years > 15 && y > 10 && y % 5 !== 0 && y !== years) continue;
+    rowYears.push(y);
+  }
+
+  rowYears.forEach(y => {
+    const contrib = startVal + weekly * 52 * y;
+    const isHighlight = (y === years) || (y % 10 === 0);
+    const tr = document.createElement('tr');
+    if (isHighlight) tr.className = 'highlight-row';
+    let html = `<td>Age ${startAge + y} <span style="color:var(--tobacco);font-size:9px">(yr ${y})</span></td>`;
+    html += `<td>${fmt(contrib)}</td>`;
+    scenariosToShow.forEach(s => {
+      const fv = calcFV(startVal, weekly, s.rate, y);
+      const gain = fv - contrib;
+      const gainPct = Math.round((gain / contrib) * 100);
+      const isActive = s.id === activeScenario;
+      html += `<td style="${isActive ? 'font-weight:600' : ''}">
+        ${fmt(fv)}
+        <div style="font-size:9px;color:${gain >= 0 ? 'var(--forest)' : 'var(--red)'}">${gain >= 0 ? '+' : ''}${fmt(gain)} (${gainPct >= 0 ? '+' : ''}${gainPct}%)</div>
+      </td>`;
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ══════════════════════ MCMUFFIN ════════════════════════════════════════ */
+function renderMcMuffin(weekly, years, finalVal, rate) {
+  const mcmPerWeek = Math.floor(weekly / 5.50);
+  const totalMcm = mcmPerWeek * 52 * years;
+  const totalSpent = weekly * 52 * years;
+
+  document.getElementById('mcm-desc').textContent =
+    `$${weekly}/week = ${mcmPerWeek} McMuffins/week. Over ${years} years that's ${totalMcm.toLocaleString()} McMuffins eaten (${fmt(totalSpent)} gone forever). The same money invested grows to ${fmtK(finalVal)} — a difference of ${fmtK(finalVal - totalSpent)}.`;
+
+  document.getElementById('mcm-vs').innerHTML = `
+    <div class="mcm-num">
+      <div class="v" style="color:var(--red)">${totalMcm.toLocaleString()}</div>
+      <div class="l">McMuffins</div>
+    </div>
+    <div style="font-size:20px;color:var(--tobacco);align-self:center">→</div>
+    <div class="mcm-num">
+      <div class="v" style="color:var(--forest)">${fmtK(finalVal)}</div>
+      <div class="l">If Invested</div>
+    </div>`;
+}
+
+/* ══════════════════════ RESIZE ═════════════════════════════════════════ */
+window.addEventListener('resize', () => {
+  const { portfolioVal, weeklyInv, currentAge, years } = getInputs();
+  renderChart(portfolioVal, weeklyInv, currentAge, years);
+});
+
+/* ══════════════════════ INIT ═══════════════════════════════════════════ */
+// Load portfolio value from parent app if available
+window.addEventListener('load', () => {
+  try {
+    const portfolio = JSON.parse(localStorage.getItem('ob_portfolio') || '[]');
+    if (portfolio.length > 0) {
+      let totalVal = 0;
+      portfolio.forEach(s => { totalVal += (s.currentPrice || 0) * (s.shares || 0); });
+      if (totalVal > 0) {
+        document.getElementById('portfolio-val').value = Math.round(totalVal);
+      }
+    }
+  } catch(e) {}
+  recalc();
+});
+</script>
+</body>
+</html>
