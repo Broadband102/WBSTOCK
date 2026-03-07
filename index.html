@@ -634,6 +634,7 @@
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchTab('screener',this)">Daily Picks</button>
     <button class="nav-tab" onclick="switchTab('portfolio',this)">Portfolio</button>
+    <button class="nav-tab" onclick="switchTab('calculator',this);initCalculator()">Calculator</button>
     <button class="nav-tab" onclick="switchTab('settings',this)">Settings</button>
     <button class="nav-tab" onclick="switchTab('deploy',this)">Deploy Guide</button>
   </div>
@@ -928,6 +929,122 @@ git push</pre>
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ CALCULATOR TAB ════════════════════════════ -->
+<div class="tab-view" id="tab-calculator">
+  <style>
+    .calc-top { display:grid; grid-template-columns:340px 1fr; gap:16px; margin-bottom:16px; }
+    .calc-inp label { display:block; font-size:9px; letter-spacing:.13em; text-transform:uppercase; color:var(--tobacco); margin-bottom:5px; margin-top:14px; }
+    .calc-inp label:first-of-type { margin-top:0; }
+    .calc-inp .fi { position:relative; }
+    .calc-inp .fi::before { content:'$'; position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--tobacco); font-size:12px; pointer-events:none; }
+    .calc-inp .fi input { padding-left:22px; }
+    .calc-inp input { width:100%; background:var(--cream); border:1px solid var(--border); border-radius:3px; padding:9px 12px; font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink); outline:none; transition:border-color .2s; }
+    .calc-inp input:focus { border-color:var(--gold); }
+    .calc-inp .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .calc-disclaimer { font-size:9px; color:var(--tobacco); line-height:1.6; margin-top:12px; padding:10px; background:var(--parchment); border-radius:3px; border-left:3px solid var(--gold); }
+    .sc-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+    .sc-btn { background:var(--cream); border:1px solid var(--border); border-radius:3px; padding:10px 8px; cursor:pointer; text-align:center; transition:all .2s; font-family:'IBM Plex Mono',monospace; }
+    .sc-btn:hover { border-color:var(--gold); }
+    .sc-btn.active { background:var(--ink); border-color:var(--gold); }
+    .sc-btn .sn { font-size:9px; text-transform:uppercase; letter-spacing:.1em; color:var(--tobacco); }
+    .sc-btn.active .sn { color:rgba(245,240,232,.5); }
+    .sc-btn .sr { font-size:16px; font-weight:500; color:var(--ink); margin:3px 0 1px; }
+    .sc-btn.active .sr { color:var(--gold); }
+    .sc-btn .sd { font-size:8px; color:var(--tobacco); }
+    .sc-btn.active .sd { color:rgba(245,240,232,.4); }
+    .sc-dot2 { width:6px; height:6px; border-radius:50%; margin:4px auto 0; }
+    .calc-sum { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+    .csum { background:white; border:1px solid var(--border); border-radius:4px; padding:16px; text-align:center; box-shadow:1px 2px 8px var(--shadow); }
+    .csum .cv { font-family:'Playfair Display',serif; font-size:22px; font-weight:500; }
+    .csum .cv.cg { color:var(--forest); }
+    .csum .cv.ck { color:var(--gold); }
+    .csum .cl { font-size:9px; text-transform:uppercase; letter-spacing:.12em; color:var(--tobacco); margin-top:4px; }
+    .csum .cs { font-size:10px; color:var(--tobacco); margin-top:2px; }
+    .chart-container { background:white; border:1px solid var(--border); border-radius:4px; box-shadow:2px 3px 12px var(--shadow); margin-bottom:16px; overflow:hidden; }
+    .chart-hd2 { background:var(--ink); padding:11px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .chart-hd2 .ct { font-family:'Playfair Display',serif; font-size:13px; color:var(--gold); font-weight:700; }
+    .cleg { display:flex; gap:14px; flex-wrap:wrap; }
+    .cli { display:flex; align-items:center; gap:5px; font-size:9px; color:rgba(245,240,232,.6); letter-spacing:.08em; text-transform:uppercase; }
+    .cdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .ctable { background:white; border:1px solid var(--border); border-radius:4px; box-shadow:2px 3px 12px var(--shadow); overflow:hidden; margin-bottom:16px; }
+    .ctable table { width:100%; border-collapse:collapse; font-size:11px; }
+    .ctable thead tr { background:var(--ink); }
+    .ctable th { padding:9px 14px; text-align:right; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:rgba(245,240,232,.6); font-weight:400; }
+    .ctable th:first-child { text-align:left; color:var(--gold); }
+    .ctable td { padding:9px 14px; text-align:right; border-bottom:1px solid var(--parchment); }
+    .ctable td:first-child { text-align:left; font-weight:500; }
+    .ctable tr:hover td { background:var(--cream); }
+    .ctable tr:last-child td { border-bottom:none; }
+    .ctable tr.crow td { background:rgba(201,162,39,.06) !important; font-weight:600; }
+    .mcm-bar { background:white; border:1px solid var(--border); border-radius:4px; padding:16px 18px; box-shadow:2px 3px 12px var(--shadow); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  </style>
+
+  <div class="calc-top">
+    <!-- INPUTS -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Your Numbers</span><span style="font-size:9px;color:rgba(245,240,232,.4);font-family:'IBM Plex Mono',monospace;letter-spacing:.1em">EDIT ANY FIELD</span></div>
+      <div class="panel-body calc-inp">
+        <label>Current Portfolio Value</label>
+        <div class="fi"><input id="c-port" type="number" value="0" min="0" oninput="cRecalc()"></div>
+        <label>Weekly Investment</label>
+        <div class="fi"><input id="c-week" type="number" value="40" min="1" oninput="cRecalc()"></div>
+        <div class="two">
+          <div><label>Your Age</label><input id="c-age" type="number" value="41" min="18" max="80" oninput="cRecalc()"></div>
+          <div><label>Target Age</label><input id="c-tgt" type="number" value="65" min="20" max="90" oninput="cRecalc()"></div>
+        </div>
+        <label>Custom Rate (optional)</label>
+        <div style="position:relative">
+          <input id="c-custom" type="number" value="" min="0" max="50" step="0.1" placeholder="e.g. 11.5" oninput="cRecalc()" style="width:100%;padding-right:24px;background:var(--cream);border:1px solid var(--border);border-radius:3px;padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);outline:none;">
+          <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--tobacco);font-size:12px">%</span>
+        </div>
+        <div class="calc-disclaimer">⚠️ Historic averages are not guaranteed. S&P 500 averaged ~10.5%/yr since 1957 but individual years range from -38% to +38%. Projection tool only — not financial advice.</div>
+      </div>
+    </div>
+
+    <!-- SCENARIOS -->
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Return Scenarios</span><span style="font-size:9px;color:rgba(245,240,232,.4);font-family:'IBM Plex Mono',monospace;letter-spacing:.1em">BASED ON HISTORIC DATA</span></div>
+      <div class="panel-body">
+        <div class="sc-grid" id="c-sc-grid"></div>
+        <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px" id="c-sc-detail"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="calc-sum" id="c-sum">
+    <div class="csum"><div class="cv ck" id="c-final">—</div><div class="cl">Final Value</div><div class="cs" id="c-final-s">at target age</div></div>
+    <div class="csum"><div class="cv cg" id="c-gain">—</div><div class="cl">Total Gain</div><div class="cs" id="c-gain-s">interest + growth</div></div>
+    <div class="csum"><div class="cv" id="c-contrib">—</div><div class="cl">Total Contributed</div><div class="cs" id="c-contrib-s">your actual dollars</div></div>
+    <div class="csum"><div class="cv" id="c-mult">—</div><div class="cl">Money Multiplier</div><div class="cs">every $1 becomes</div></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-container">
+    <div class="chart-hd2">
+      <span class="ct">Portfolio Growth Over Time</span>
+      <div class="cleg" id="c-legend"></div>
+    </div>
+    <canvas id="c-canvas" style="display:block;width:100%" height="300"></canvas>
+  </div>
+
+  <!-- TABLE -->
+  <div class="ctable">
+    <div class="panel-header"><span class="panel-title">Year-by-Year Projection</span><span style="font-size:9px;color:rgba(245,240,232,.4);font-family:'IBM Plex Mono',monospace;letter-spacing:.1em">ALL SCENARIOS</span></div>
+    <div style="overflow-x:auto"><table><thead><tr id="c-thead"></tr></thead><tbody id="c-tbody"></tbody></table></div>
+  </div>
+
+  <!-- MCMUFFIN -->
+  <div class="mcm-bar">
+    <div style="font-size:28px">🥐</div>
+    <div style="flex:1">
+      <div style="font-size:11px;font-weight:600;margin-bottom:4px">The McMuffin Opportunity Cost</div>
+      <div style="font-size:10px;color:var(--tobacco);line-height:1.6" id="c-mcm-desc">—</div>
+    </div>
+    <div style="display:flex;gap:20px" id="c-mcm-vs"></div>
   </div>
 </div>
 
@@ -1861,6 +1978,234 @@ function showToast(msg) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3200);
 }
+
+/* ══════════════════════════ CALCULATOR ═══════════════════════════════════ */
+const C_SCENARIOS = [
+  { id:'bear',       name:'Bear',     rate:0.04,  display:'4%',    desc:'Poor decade',    color:'#8b1a1a',
+    detail:'Reflects lost decades like 2000–2009 where equities averaged ~1%. Possible if inflation stays elevated.',
+    ref:'Worst 20yr S&P rolling avg: ~6.4%' },
+  { id:'sp500',      name:'S&P 500',  rate:0.105, display:'10.5%', desc:'Index fund avg', color:'#2d6b8a',
+    detail:'The S&P 500 long-run average since 1957. Achievable via VOO or SPY with zero stock picking.',
+    ref:'S&P 500 annualized 1957–2024: ~10.5%' },
+  { id:'value',      name:'Value',    rate:0.13,  display:'13%',   desc:'Buffett-style',  color:'#2d4a22',
+    detail:'Value investors historically beat the index by 2–4% annually. 13% is a conservative estimate.',
+    ref:'Fama-French value premium: +3–4%/yr over index' },
+  { id:'aggressive', name:'Growth',   rate:0.18,  display:'18%',   desc:'Concentrated',   color:'#c9a227',
+    detail:'High variance — same strategy produces -30% in bad years. Only sustainable in extended bull markets.',
+    ref:'Berkshire 1965–1985 (early years): ~23%/yr' },
+  { id:'custom',     name:'Custom',   rate:null,  display:'—',     desc:'Your rate',      color:'#8b5e3c',
+    detail:'Enter your own expected rate in the field on the left.',
+    ref:'Set your own assumption' },
+];
+let cActive = 'sp500';
+let cInitDone = false;
+
+function initCalculator() {
+  // Auto-fill portfolio value from localStorage
+  if (!cInitDone) {
+    try {
+      const port = JSON.parse(localStorage.getItem('ob_portfolio') || '[]');
+      let total = 0;
+      port.forEach(s => { total += (parseFloat(s.currentPrice)||0) * (parseFloat(s.shares)||0); });
+      if (total > 0) document.getElementById('c-port').value = Math.round(total * 100) / 100;
+    } catch(e) {}
+    cInitDone = true;
+  }
+  cRecalc();
+}
+
+function cFmt(n)  { return '$' + Math.round(n).toLocaleString(); }
+function cFmtK(n) { return n >= 1e6 ? '$'+(n/1e6).toFixed(2)+'M' : n >= 1e3 ? '$'+(n/1e3).toFixed(0)+'K' : '$'+Math.round(n).toLocaleString(); }
+
+function cFV(start, weekly, rate, years) {
+  const wr = rate / 52, wks = years * 52;
+  const lump = start * Math.pow(1 + rate, years);
+  const dca  = weekly > 0 ? weekly * ((Math.pow(1+wr, wks)-1) / wr) : 0;
+  return lump + dca;
+}
+
+function cGetInputs() {
+  return {
+    port:   parseFloat(document.getElementById('c-port').value)   || 0,
+    weekly: parseFloat(document.getElementById('c-week').value)   || 40,
+    age:    parseInt(document.getElementById('c-age').value)      || 41,
+    tgt:    parseInt(document.getElementById('c-tgt').value)      || 65,
+    custom: parseFloat(document.getElementById('c-custom').value),
+    get years() { return Math.max(1, this.tgt - this.age); }
+  };
+}
+
+function cActiveRate() {
+  const { custom } = cGetInputs();
+  if (cActive === 'custom') return isNaN(custom) ? 0.105 : custom / 100;
+  return C_SCENARIOS.find(s => s.id === cActive).rate;
+}
+
+function cRecalc() {
+  cRenderScenarios();
+  const { port, weekly, age, tgt, years } = cGetInputs();
+  const rate = cActiveRate();
+  const contributed = port + weekly * 52 * years;
+  const final = cFV(port, weekly, rate, years);
+  const gain = final - contributed;
+  const mult = contributed > 0 ? (final / contributed) : 0;
+
+  document.getElementById('c-final').textContent   = cFmtK(final);
+  document.getElementById('c-final-s').textContent  = `at age ${tgt}`;
+  document.getElementById('c-gain').textContent    = cFmtK(gain);
+  document.getElementById('c-gain-s').textContent   = `${Math.round((gain/contributed)*100)}% on contributions`;
+  document.getElementById('c-contrib').textContent = cFmtK(contributed);
+  document.getElementById('c-contrib-s').textContent= `over ${years} years`;
+  document.getElementById('c-mult').textContent    = mult > 0 ? mult.toFixed(2)+'x' : '—';
+
+  cRenderChart(port, weekly, age, years);
+  cRenderTable(port, weekly, age, years);
+  cRenderMcm(weekly, years, final);
+}
+
+function cRenderScenarios() {
+  const inputs = cGetInputs();
+  const custom = inputs.custom;
+  const grid = document.getElementById('c-sc-grid');
+  grid.innerHTML = '';
+  C_SCENARIOS.forEach(s => {
+    const disp = s.id==='custom' ? (isNaN(custom)||custom===''||custom===undefined ? '—%' : custom+'%') : s.display;
+    const d = document.createElement('div');
+    d.className = 'sc-btn' + (s.id===cActive ? ' active' : '');
+    d.innerHTML = `<div class="sn">${s.name}</div><div class="sr">${disp}</div><div class="sd">${s.desc}</div><div class="sc-dot2" style="background:${s.color}"></div>`;
+    d.onclick = () => { cActive = s.id; cRecalc(); };
+    grid.appendChild(d);
+  });
+  const sc = C_SCENARIOS.find(s => s.id===cActive);
+  document.getElementById('c-sc-detail').innerHTML = `
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:3px;padding:12px;border-left:3px solid ${sc.color}">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--tobacco);margin-bottom:5px">About this scenario</div>
+      <div style="font-size:11px;line-height:1.7">${sc.detail}</div>
+    </div>
+    <div style="background:var(--cream);border:1px solid var(--border);border-radius:3px;padding:12px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--tobacco);margin-bottom:5px">Historical reference</div>
+      <div style="font-size:11px;line-height:1.7;font-style:italic;color:var(--tobacco)">${sc.ref}</div>
+    </div>`;
+}
+
+function cRenderChart(startVal, weekly, startAge, years) {
+  const canvas = document.getElementById('c-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || canvas.parentElement.offsetWidth || 800;
+  const H = 300;
+  canvas.width = W; canvas.height = H;
+  const P = { t:20, r:20, b:40, l:72 };
+  const cW = W-P.l-P.r, cH = H-P.t-P.b;
+  ctx.clearRect(0,0,W,H);
+
+  const { custom } = cGetInputs();
+  const show = C_SCENARIOS.filter(s => s.id!=='custom' || (!isNaN(custom)&&custom!==''&&custom!==undefined))
+    .map(s => ({ ...s, rate: s.id==='custom' ? custom/100 : s.rate }));
+
+  const data = show.map(s => {
+    const pts = [];
+    for (let y=0; y<=years; y++) pts.push(cFV(startVal, weekly, s.rate, y));
+    return { ...s, pts };
+  });
+  const contribPts = Array.from({length:years+1},(_,y)=>startVal+weekly*52*y);
+  const maxV = Math.max(...data.flatMap(d=>d.pts), ...contribPts)*1.05;
+  const xOf = y => P.l + (y/years)*cW;
+  const yOf = v => P.t + cH - (v/maxV)*cH;
+
+  // grid
+  for (let i=0;i<=5;i++) {
+    const v=(maxV/5)*i, y=yOf(v);
+    ctx.strokeStyle='rgba(196,176,138,0.25)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(P.l,y); ctx.lineTo(P.l+cW,y); ctx.stroke();
+    ctx.fillStyle='#8b5e3c'; ctx.font='9px IBM Plex Mono'; ctx.textAlign='right';
+    ctx.fillText(cFmtK(v), P.l-5, y+3);
+  }
+  const step = years<=10?1:years<=20?2:5;
+  for (let y=0;y<=years;y+=step) {
+    ctx.fillStyle='#8b5e3c'; ctx.font='9px IBM Plex Mono'; ctx.textAlign='center';
+    ctx.fillText(startAge+y, xOf(y), H-P.b+15);
+  }
+
+  // contributed dashed
+  ctx.strokeStyle='rgba(139,94,60,0.35)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  contribPts.forEach((v,i)=>i===0?ctx.moveTo(xOf(i),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // scenario lines
+  data.forEach(s => {
+    const isAct = s.id===cActive;
+    ctx.strokeStyle=s.color; ctx.lineWidth=isAct?3:1.5; ctx.globalAlpha=isAct?1:0.3;
+    ctx.beginPath();
+    s.pts.forEach((v,i)=>i===0?ctx.moveTo(xOf(i),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+    ctx.stroke();
+    if (isAct) {
+      ctx.globalAlpha=0.07; ctx.fillStyle=s.color; ctx.beginPath();
+      s.pts.forEach((v,i)=>i===0?ctx.moveTo(xOf(i),yOf(v)):ctx.lineTo(xOf(i),yOf(v)));
+      ctx.lineTo(xOf(years),yOf(0)); ctx.lineTo(xOf(0),yOf(0)); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.fillStyle=s.color; ctx.font='bold 10px IBM Plex Mono'; ctx.textAlign='left';
+      ctx.fillText(cFmtK(s.pts[years]), Math.min(xOf(years)+4, W-55), yOf(s.pts[years])-4);
+    }
+    ctx.globalAlpha=1;
+  });
+
+  // x axis
+  ctx.strokeStyle='rgba(196,176,138,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(P.l,P.t+cH); ctx.lineTo(P.l+cW,P.t+cH); ctx.stroke();
+
+  // legend
+  document.getElementById('c-legend').innerHTML =
+    data.map(s=>`<div class="cli"><div class="cdot" style="background:${s.color}"></div>${s.name} ${s.id==='custom'?(cGetInputs().custom+'%'):s.display}</div>`).join('')+
+    `<div class="cli"><div class="cdot" style="background:rgba(139,94,60,.4)"></div>Contributions</div>`;
+}
+
+function cRenderTable(startVal, weekly, startAge, years) {
+  const { custom } = cGetInputs();
+  const show = C_SCENARIOS.filter(s => s.id!=='custom'||(!isNaN(custom)&&custom!==''&&custom!==undefined))
+    .map(s=>({...s, rate: s.id==='custom'?custom/100:s.rate}));
+
+  document.getElementById('c-thead').innerHTML = `<th>Age / Year</th><th>Contributed</th>` +
+    show.map(s=>`<th style="color:${s.color}">${s.name}<br><span style="font-weight:300">${s.id==='custom'?custom+'%':s.display}</span></th>`).join('');
+
+  const tbody = document.getElementById('c-tbody');
+  tbody.innerHTML = '';
+  for (let y=1; y<=years; y++) {
+    if (years>15 && y>10 && y%5!==0 && y!==years) continue;
+    const contrib = startVal + weekly*52*y;
+    const isH = (y===years)||(y%10===0);
+    const tr = document.createElement('tr');
+    if(isH) tr.className='crow';
+    let html = `<td>Age ${startAge+y} <span style="color:var(--tobacco);font-size:9px">(yr ${y})</span></td><td>${cFmt(contrib)}</td>`;
+    show.forEach(s => {
+      const fv = cFV(startVal, weekly, s.rate, y);
+      const g = fv-contrib, gp = Math.round((g/contrib)*100);
+      const bold = s.id===cActive ? 'font-weight:600' : '';
+      html += `<td style="${bold}">${cFmt(fv)}<div style="font-size:9px;color:${g>=0?'var(--forest)':'var(--red)'}">${g>=0?'+':''}${cFmt(g)} (${gp>=0?'+':''}${gp}%)</div></td>`;
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  }
+}
+
+function cRenderMcm(weekly, years, final) {
+  const mcm = Math.floor(weekly/5.50);
+  const tot = mcm*52*years;
+  const spent = weekly*52*years;
+  document.getElementById('c-mcm-desc').textContent =
+    `$${weekly}/week = ${mcm} McMuffins/week. Over ${years} years: ${tot.toLocaleString()} McMuffins eaten (${cFmt(spent)} gone forever). Invested instead: ${cFmtK(final)}.`;
+  document.getElementById('c-mcm-vs').innerHTML = `
+    <div style="text-align:center"><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--red)">${tot.toLocaleString()}</div><div style="font-size:9px;color:var(--tobacco);text-transform:uppercase;letter-spacing:.1em;margin-top:2px">McMuffins</div></div>
+    <div style="font-size:20px;color:var(--tobacco);align-self:center">→</div>
+    <div style="text-align:center"><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--forest)">${cFmtK(final)}</div><div style="font-size:9px;color:var(--tobacco);text-transform:uppercase;letter-spacing:.1em;margin-top:2px">If Invested</div></div>`;
+}
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('tab-calculator')?.classList.contains('active')) {
+    const { port, weekly, age, years } = cGetInputs();
+    cRenderChart(port, weekly, age, years);
+  }
+});
 </script>
 </body>
 </html>
