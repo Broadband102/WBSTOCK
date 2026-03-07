@@ -1120,96 +1120,121 @@ async function avGetIncome(ticker) {
 }
 
 // Compute real Buffett score from live data
-function computeBuffettScore(overview, incomeHistory) {
+// Safe numeric check — treats null, undefined, NaN, 0-from-missing as absent
+function hasVal(v) { return v !== null && v !== undefined && !isNaN(v) && isFinite(v); }
+
+function computeBuffettScore(overview, claudeEstimates) {
   if(!overview) return null;
   let score = 0;
   let factors = {};
+  let missingFields = [];
 
-  // 1. P/E (max 15 pts) — Buffett wants P/E < 20, loves < 15
-  if(overview.pe !== null) {
-    if(overview.pe < 10) { score += 15; factors.pe = 15; }
-    else if(overview.pe < 15) { score += 12; factors.pe = 12; }
-    else if(overview.pe < 20) { score += 8; factors.pe = 8; }
-    else if(overview.pe < 25) { score += 3; factors.pe = 3; }
-    else { factors.pe = 0; }
-  }
+  // Merge live AV data with Claude estimates for any missing fields
+  const d = {
+    pe:               hasVal(overview.pe)               ? overview.pe               : claudeEstimates?.pe,
+    pb:               hasVal(overview.pb)               ? overview.pb               : claudeEstimates?.pb,
+    roe:              hasVal(overview.roe)              ? overview.roe              : claudeEstimates?.roe,
+    de:               hasVal(overview.de)               ? overview.de               : claudeEstimates?.de,
+    netMargin:        hasVal(overview.netMargin)        ? overview.netMargin        : claudeEstimates?.netMargin,
+    earningsGrowthYoy:hasVal(overview.earningsGrowthYoy)? overview.earningsGrowthYoy: claudeEstimates?.earningsGrowthYoy,
+    divYield:         hasVal(overview.divYield)         ? overview.divYield         : claudeEstimates?.divYield,
+    evToEbitda:       hasVal(overview.evToEbitda)       ? overview.evToEbitda       : claudeEstimates?.evToEbitda,
+  };
 
-  // 2. P/B (max 12 pts) — loves P/B < 1.5
-  if(overview.pb !== null) {
-    if(overview.pb < 1.0) { score += 12; factors.pb = 12; }
-    else if(overview.pb < 1.5) { score += 10; factors.pb = 10; }
-    else if(overview.pb < 2.5) { score += 5; factors.pb = 5; }
-    else if(overview.pb < 4) { score += 2; factors.pb = 2; }
-    else { factors.pb = 0; }
-  }
+  // 1. P/E (max 15 pts)
+  if(hasVal(d.pe)) {
+    if(d.pe < 10)      { score += 15; factors.pe = 15; }
+    else if(d.pe < 15) { score += 12; factors.pe = 12; }
+    else if(d.pe < 20) { score += 8;  factors.pe = 8; }
+    else if(d.pe < 25) { score += 3;  factors.pe = 3; }
+    else               { factors.pe = 0; }
+  } else { missingFields.push('P/E'); score += 5; factors.pe = 5; } // neutral fallback
 
-  // 3. ROE (max 18 pts) — must be 15%+, loves 20%+
-  if(overview.roe !== null) {
-    if(overview.roe >= 25) { score += 18; factors.roe = 18; }
-    else if(overview.roe >= 20) { score += 15; factors.roe = 15; }
-    else if(overview.roe >= 15) { score += 10; factors.roe = 10; }
-    else if(overview.roe >= 10) { score += 4; factors.roe = 4; }
-    else { factors.roe = 0; }
-  }
+  // 2. P/B (max 12 pts)
+  if(hasVal(d.pb)) {
+    if(d.pb < 1.0)      { score += 12; factors.pb = 12; }
+    else if(d.pb < 1.5) { score += 10; factors.pb = 10; }
+    else if(d.pb < 2.5) { score += 5;  factors.pb = 5; }
+    else if(d.pb < 4.0) { score += 2;  factors.pb = 2; }
+    else                { factors.pb = 0; }
+  } else { missingFields.push('P/B'); score += 4; factors.pb = 4; }
 
-  // 4. D/E (max 15 pts) — hates debt
-  if(overview.de !== null) {
-    if(overview.de < 0.3) { score += 15; factors.de = 15; }
-    else if(overview.de < 0.7) { score += 12; factors.de = 12; }
-    else if(overview.de < 1.0) { score += 7; factors.de = 7; }
-    else if(overview.de < 1.5) { score += 3; factors.de = 3; }
-    else { factors.de = 0; }
-  }
+  // 3. ROE (max 18 pts)
+  if(hasVal(d.roe)) {
+    if(d.roe >= 25)      { score += 18; factors.roe = 18; }
+    else if(d.roe >= 20) { score += 15; factors.roe = 15; }
+    else if(d.roe >= 15) { score += 10; factors.roe = 10; }
+    else if(d.roe >= 10) { score += 4;  factors.roe = 4; }
+    else                 { factors.roe = 0; }
+  } else { missingFields.push('ROE'); score += 6; factors.roe = 6; }
 
-  // 5. Net Margin (max 15 pts) — pricing power
-  if(overview.netMargin !== null) {
-    if(overview.netMargin >= 20) { score += 15; factors.margin = 15; }
-    else if(overview.netMargin >= 15) { score += 12; factors.margin = 12; }
-    else if(overview.netMargin >= 10) { score += 8; factors.margin = 8; }
-    else if(overview.netMargin >= 5) { score += 4; factors.margin = 4; }
-    else { factors.margin = 0; }
-  }
+  // 4. D/E (max 15 pts)
+  if(hasVal(d.de)) {
+    if(d.de < 0.3)      { score += 15; factors.de = 15; }
+    else if(d.de < 0.7) { score += 12; factors.de = 12; }
+    else if(d.de < 1.0) { score += 7;  factors.de = 7; }
+    else if(d.de < 1.5) { score += 3;  factors.de = 3; }
+    else                { factors.de = 0; }
+  } else { missingFields.push('D/E'); score += 5; factors.de = 5; }
 
-  // 6. Earnings Growth YoY (max 10 pts)
-  if(overview.earningsGrowthYoy !== null) {
-    if(overview.earningsGrowthYoy >= 15) { score += 10; factors.growth = 10; }
-    else if(overview.earningsGrowthYoy >= 8) { score += 7; factors.growth = 7; }
-    else if(overview.earningsGrowthYoy >= 0) { score += 3; factors.growth = 3; }
-    else { factors.growth = 0; }
-  }
+  // 5. Net Margin (max 15 pts)
+  if(hasVal(d.netMargin)) {
+    if(d.netMargin >= 20)      { score += 15; factors.margin = 15; }
+    else if(d.netMargin >= 15) { score += 12; factors.margin = 12; }
+    else if(d.netMargin >= 10) { score += 8;  factors.margin = 8; }
+    else if(d.netMargin >= 5)  { score += 4;  factors.margin = 4; }
+    else                       { factors.margin = 0; }
+  } else { missingFields.push('Margin'); score += 5; factors.margin = 5; }
 
-  // 7. Dividend (max 8 pts) — likes steady dividends
-  if(overview.divYield !== null) {
-    if(overview.divYield >= 3) { score += 8; factors.div = 8; }
-    else if(overview.divYield >= 1.5) { score += 6; factors.div = 6; }
-    else if(overview.divYield > 0) { score += 3; factors.div = 3; }
-    else { factors.div = 0; }
-  }
+  // 6. Earnings Growth (max 10 pts)
+  // Softer penalty: single bad YoY quarter (e.g. post-commodity peak) gets partial credit
+  // rather than 0. Negative growth only fully penalized if deeply negative (-20%+)
+  if(hasVal(d.earningsGrowthYoy)) {
+    if(d.earningsGrowthYoy >= 15)       { score += 10; factors.growth = 10; }
+    else if(d.earningsGrowthYoy >= 8)   { score += 7;  factors.growth = 7; }
+    else if(d.earningsGrowthYoy >= 0)   { score += 4;  factors.growth = 4; }
+    else if(d.earningsGrowthYoy >= -15) { score += 2;  factors.growth = 2; } // modest decline = small credit
+    else                                { factors.growth = 0; }              // severe decline = 0
+  } else { missingFields.push('Growth'); score += 4; factors.growth = 4; }
 
-  // 8. EV/EBITDA (max 7 pts) — overall value
-  if(overview.evToEbitda !== null) {
-    if(overview.evToEbitda < 8) { score += 7; factors.ev = 7; }
-    else if(overview.evToEbitda < 12) { score += 5; factors.ev = 5; }
-    else if(overview.evToEbitda < 16) { score += 2; factors.ev = 2; }
-    else { factors.ev = 0; }
-  }
+  // 7. Dividend (max 8 pts)
+  if(hasVal(d.divYield)) {
+    if(d.divYield >= 3)       { score += 8; factors.div = 8; }
+    else if(d.divYield >= 1.5){ score += 6; factors.div = 6; }
+    else if(d.divYield > 0)   { score += 3; factors.div = 3; }
+    else                      { factors.div = 0; }
+  } else { missingFields.push('Div'); score += 2; factors.div = 2; }
 
-  return { score: Math.min(100, Math.round(score)), factors };
+  // 8. EV/EBITDA (max 7 pts)
+  if(hasVal(d.evToEbitda)) {
+    if(d.evToEbitda < 8)       { score += 7; factors.ev = 7; }
+    else if(d.evToEbitda < 12) { score += 5; factors.ev = 5; }
+    else if(d.evToEbitda < 16) { score += 2; factors.ev = 2; }
+    else                       { factors.ev = 0; }
+  } else { missingFields.push('EV/EBITDA'); score += 2; factors.ev = 2; }
+
+  return {
+    score: Math.min(100, Math.round(score)),
+    factors,
+    missingFields,
+    dataCompleteness: Math.round(((8 - missingFields.length) / 8) * 100)
+  };
 }
 
 // Convert sub-scores to bar percentages (0-100)
-function scoreToBar(overview, incomeHistory) {
-  const scored = computeBuffettScore(overview, incomeHistory);
+function scoreToBar(overview, claudeEstimates) {
+  const scored = computeBuffettScore(overview, claudeEstimates);
   if(!scored) return null;
   const f = scored.factors;
+  const d = overview || {};
 
   return {
-    moatRating:     Math.min(100, Math.round(((f.margin||0)/15)*100)),
-    earningsGrowth: Math.min(100, Math.round(((f.growth||0)/10)*100)),
-    freeCashFlow:   Math.min(100, overview?.netMargin > 0 ? Math.min(100, overview.netMargin * 3.5) : 30),
-    marginOfSafety: overview?.pe ? Math.min(100, Math.round(Math.max(0, (25 - overview.pe) / 25 * 100 + 20))) : 50,
-    debtQuality:    Math.min(100, Math.round(((f.de||0)/15)*100)),
-    managementScore:Math.min(100, Math.round(((f.roe||0)/18)*100)),
+    moatRating:      Math.min(100, Math.round(((f.margin||0)/15)*100)),
+    earningsGrowth:  Math.min(100, Math.round(((f.growth||0)/10)*100)),
+    freeCashFlow:    hasVal(d.netMargin) ? Math.min(100, Math.round(d.netMargin * 3.5)) : 40,
+    marginOfSafety:  hasVal(d.pe) ? Math.min(100, Math.round(Math.max(0, (25 - d.pe) / 25 * 100 + 20))) : 50,
+    debtQuality:     Math.min(100, Math.round(((f.de||0)/15)*100)),
+    managementScore: Math.min(100, Math.round(((f.roe||0)/18)*100)),
   };
 }
 
@@ -1344,21 +1369,34 @@ Return ONLY valid JSON.`;
     const text = (data.content?.[0]?.text || '');
     let picks = safeParseJSON(text);
 
-    // ── Override scores with computed Buffett scores if live data available ──
+    // ── Override scores with computed Buffett scores, using Claude estimates as fallback for missing AV fields ──
     if(hasLiveData) {
       picks = picks.map(p => {
         const live = liveData[p.ticker];
         if(live?.overview) {
-          const scored = computeBuffettScore(live.overview);
-          const bars = scoreToBar(live.overview);
-          if(scored) p.buffettScore = scored.score;
+          const scored = computeBuffettScore(live.overview, p); // p has Claude's estimates
+          const bars = scoreToBar(live.overview, p);
+          if(scored) {
+            p.buffettScore = scored.score;
+            p.dataCompleteness = scored.dataCompleteness;
+            p.missingFields = scored.missingFields;
+          }
           if(bars) Object.assign(p, bars);
-          // Use live price if available
           if(live.quote?.price) {
             p.price = live.quote.price;
             p.change = live.quote.change;
             p.changePct = live.quote.changePct;
           }
+          // Fill any null AV fields with Claude estimates so display shows values
+          if(!hasVal(live.overview.pe))  p.pe  = p.pe  || 0;
+          if(!hasVal(live.overview.pb))  p.pb  = p.pb  || 0;
+          if(!hasVal(live.overview.roe)) p.roe = p.roe || 0;
+          if(!hasVal(live.overview.de))  p.de  = p.de  || 0;
+          else { p.pe = live.overview.pe; p.pb = live.overview.pb; p.roe = live.overview.roe; p.de = live.overview.de; }
+          if(!hasVal(live.overview.netMargin)) p.netMargin = p.netMargin || 0;
+          else p.netMargin = live.overview.netMargin;
+          if(!hasVal(live.overview.divYield)) p.divYield = p.divYield || 0;
+          else p.divYield = live.overview.divYield;
           p.dataSource = 'live';
         }
         return p;
@@ -1455,8 +1493,9 @@ function renderPicks(picks, hasLiveData) {
               <div class="metric-box-label">Upside to Intrinsic</div>
             </div>` : ''}
           </div>` : ''}
-          <div class="section-divider">Buffett Score Breakdown ${isLive ? '<span style="font-size:9px;color:var(--forest)">(computed from live data)</span>' : '<span style="font-size:9px;color:var(--tobacco)">(AI estimated)</span>'}</div>
+          <div class="section-divider">Buffett Score Breakdown ${isLive ? '<span style="font-size:9px;color:var(--forest)">(live AV data)</span>' : '<span style="font-size:9px;color:var(--tobacco)">(AI estimated)</span>'}</div>
           <div class="buffett-bars">${bars}</div>
+          ${p.missingFields?.length ? `<div style="font-size:10px;color:var(--tobacco);margin-top:8px;padding:8px 10px;background:var(--cream);border-radius:3px;border:1px solid var(--border)">⚠️ AV returned no data for: <strong>${p.missingFields.join(', ')}</strong> — Claude estimates used for those fields. Data completeness: ${p.dataCompleteness}%</div>` : ''}
           <div class="analysis-box"><em>Investment Thesis:</em> ${p.thesis}</div>
         </div>
       </div>`;
