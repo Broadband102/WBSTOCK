@@ -632,10 +632,10 @@
     <span class="logo-sub">Value Intelligence Platform</span>
   </div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('screener')">Daily Picks</button>
-    <button class="nav-tab" onclick="switchTab('portfolio')">Portfolio</button>
-    <button class="nav-tab" onclick="switchTab('settings')">Settings</button>
-    <button class="nav-tab" onclick="switchTab('deploy')">Deploy Guide</button>
+    <button class="nav-tab active" onclick="switchTab('screener',this)">Daily Picks</button>
+    <button class="nav-tab" onclick="switchTab('portfolio',this)">Portfolio</button>
+    <button class="nav-tab" onclick="switchTab('settings',this)">Settings</button>
+    <button class="nav-tab" onclick="switchTab('deploy',this)">Deploy Guide</button>
   </div>
   <div class="api-badge">
     <div class="api-dot" id="api-dot"></div>
@@ -972,11 +972,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ══════════════════════════════════ TABS ════════════════════════════════ */
-function switchTab(id) {
-  document.querySelectorAll('.tab-view').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
-  event.currentTarget.classList.add('active');
+  if(el) el.classList.add('active');
 }
 
 /* ══════════════════════════════════ JSON SAFETY ═════════════════════════ */
@@ -1251,7 +1251,7 @@ Pick lesser-known, genuinely undervalued companies — not FAANG or mega-caps. R
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 100, messages: [{ role: 'user', content: tickerPrompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 100, messages: [{ role: 'user', content: tickerPrompt }] })
     });
     const data = await res.json();
     if(data.error) throw new Error(data.error.message || JSON.stringify(data.error));
@@ -1325,7 +1325,7 @@ Return a JSON array:
   "buffettScore": 0,
   "pe": 0.0, "pb": 0.0, "roe": 0.0, "de": 0.0, "divYield": 0.0, "netMargin": 0.0,
   "moatRating": 0, "earningsGrowth": 0, "freeCashFlow": 0, "marginOfSafety": 0, "debtQuality": 0, "managementScore": 0,
-  "dataSource": "live" or "estimated",
+  "dataSource": "estimated",
   "thesis": "2-3 sentence Buffett-style thesis.",
   "intrinsicValue": 0.00,
   "upside": 0.0
@@ -1336,7 +1336,7 @@ Return ONLY valid JSON.`;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2500, messages: [{ role: 'user', content: scorePrompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2500, messages: [{ role: 'user', content: scorePrompt }] })
     });
 
     const data = await res.json();
@@ -1706,7 +1706,7 @@ Return ONLY valid JSON.`;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: prompt }] })
     });
 
     const data = await res.json();
@@ -1796,7 +1796,7 @@ async function openReviewSilent(idx) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 50, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 50, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
     if(data.error) throw new Error(data.error.message);
