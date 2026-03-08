@@ -1,0 +1,40 @@
+# Oracle Buffet — Weekly Email Scheduler
+# Runs every Monday at 11:30 UTC (6:30 AM Central Time)
+# Uses GitHub Actions free tier — no Cloudflare needed
+
+name: Oracle Buffet Weekly Pick
+
+on:
+  schedule:
+    # Every Monday at 11:30 UTC = 6:30 AM Central Time
+    - cron: '30 11 * * 1'
+
+  # Also lets you trigger manually from GitHub → Actions tab → Run workflow
+  workflow_dispatch:
+
+jobs:
+  send-weekly-pick:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Send Oracle Buffet Pick
+        env:
+          ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_KEY }}
+          RESEND_KEY:    ${{ secrets.RESEND_KEY }}
+          AV_KEY:        ${{ secrets.AV_KEY }}
+          TO_EMAIL:      ${{ secrets.TO_EMAIL }}
+          FROM_EMAIL:    ${{ secrets.FROM_EMAIL }}
+        run: node -e "
+          import('./send-pick.js')
+            .then(m => m.sendWeeklyPick())
+            .then(r => console.log('Done:', JSON.stringify(r)))
+            .catch(e => { console.error(e); process.exit(1); })
+        "
